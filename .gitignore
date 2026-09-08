@@ -1,0 +1,16 @@
+﻿/target
+**/*.rs.bk
+.DS_Store
+*.sqlite
+*.sqlite-*
+.idea
+.vscode
+Cargo.lock.bak
+
+node_modules/
+package.json
+package-lock.json
+proof/capture.js
+proof/debug.js
+proof/debug.png
+
