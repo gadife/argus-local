@@ -71,3 +71,8 @@ Real Codex/Grok adapters, org Share bridge, GitHub shipping join, native GUI, No
 ## License
 
 MIT
+
+## Proof screenshots
+
+See `proof/today.png` and `proof/insights.png` from `argus-local open --fixtures` on gili-pc.
+
