@@ -34,8 +34,9 @@ pub fn serve(addr: &str, store: Arc<Mutex<SessionStore>>) -> Result<()> {
                 let payload = {
                     let st = store.lock().unwrap();
                     let statuses = st.statuses.clone();
-                    let today = rollup(&st.sessions, days, statuses.clone());
-                    let insights = build_insights(&st.sessions, days, statuses);
+                    let used_fixtures = st.used_fixtures;
+                    let today = rollup(&st.sessions, days, statuses.clone(), used_fixtures);
+                    let insights = build_insights(&st.sessions, days, statuses, used_fixtures);
                     DashboardJson {
                         today,
                         insights,

@@ -1,4 +1,4 @@
-﻿//! Shared domain models for Argus Local.
+//! Shared domain models for Argus Local.
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
@@ -11,6 +11,8 @@ pub struct SessionRecord {
     pub ended_at: DateTime<Utc>,
     pub input_tokens: i64,
     pub output_tokens: i64,
+    /// False when adapter observed a session but had no real token counts.
+    pub tokens_known: bool,
     pub tools_proposed: i64,
     pub tools_accepted: i64,
     pub source: String, // "claude" | "cursor" | "fixture" | "stub"
@@ -19,7 +21,11 @@ pub struct SessionRecord {
 
 impl SessionRecord {
     pub fn total_tokens(&self) -> i64 {
-        self.input_tokens + self.output_tokens
+        if self.tokens_known {
+            self.input_tokens + self.output_tokens
+        } else {
+            0
+        }
     }
 }
 
@@ -36,6 +42,7 @@ pub struct PeriodRollup {
     pub period_days: u32,
     pub sessions: i64,
     pub tokens: i64,
+    pub tokens_known: bool,
     pub est_spend_usd: f64,
     pub tool_accept_pct: Option<f64>,
     pub models_unique: i64,
@@ -44,12 +51,14 @@ pub struct PeriodRollup {
     pub shipping: ShippingStub,
     pub adapter_status: Vec<AdapterStatus>,
     pub language_lock: LanguageLock,
+    pub used_fixtures: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ToolRollup {
     pub tool: String,
     pub tokens: i64,
+    pub tokens_known: bool,
     pub sessions: i64,
     pub cost_incomplete: bool,
     pub share_pct: f64,
@@ -61,14 +70,17 @@ pub struct ActivityRow {
     pub tool: String,
     pub model: String,
     pub tokens: i64,
+    pub tokens_known: bool,
     pub est_spend_usd: f64,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShippingStub {
-    pub merged_prs: i64,
-    pub commits: i64,
-    pub files_touched: i64,
+    /// Stub/opt-in placeholder only — not observed GitHub data in v1.
+    pub is_stub: bool,
+    pub merged_prs: Option<i64>,
+    pub commits: Option<i64>,
+    pub files_touched: Option<i64>,
     pub note: String,
 }
 
@@ -83,10 +95,10 @@ pub struct LanguageLock {
 impl Default for LanguageLock {
     fn default() -> Self {
         Self {
-            estimates_note: "Local only · estimates ≠ invoice".into(),
-            observations_note: "Local only · observations, not a score".into(),
-            shipping_note: "correlation with sessions · not a productivity score.".into(),
-            footer: "aggregates only · no raw prompts or code · local-first".into(),
+            estimates_note: "Local only \u{2014} estimates \u{2260} invoice".into(),
+            observations_note: "Local only \u{2014} observations, not a score".into(),
+            shipping_note: "Stub / opt-in GitHub placeholder \u{2014} not observed shipping data.".into(),
+            footer: "aggregates only \u{2014} no raw prompts or code \u{2014} local-first".into(),
         }
     }
 }

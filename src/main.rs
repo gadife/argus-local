@@ -129,8 +129,8 @@ fn main() -> Result<()> {
         } => {
             let store = load_store(fixtures)?;
             if json {
-                let today = rollups::rollup(&store.sessions, days, store.statuses.clone());
-                let insights = insights::build_insights(&store.sessions, days, store.statuses.clone());
+                let today = rollups::rollup(&store.sessions, days, store.statuses.clone(), store.used_fixtures);
+                let insights = insights::build_insights(&store.sessions, days, store.statuses.clone(), store.used_fixtures);
                 let out = serde_json::json!({
                     "today": today,
                     "insights": insights,

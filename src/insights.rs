@@ -1,4 +1,4 @@
-﻿//! Deterministic insights — observations with evidence, never grades.
+//! Deterministic insights - observations with evidence, never grades.
 use crate::models::{Finding, InsightsPayload, LanguageLock, SessionRecord};
 use crate::rollups::{estimate_spend_usd, rollup};
 use chrono::{Duration, Utc};
@@ -7,12 +7,13 @@ pub fn build_insights(
     sessions: &[SessionRecord],
     period_days: u32,
     adapter_status: Vec<crate::models::AdapterStatus>,
+    used_fixtures: bool,
 ) -> InsightsPayload {
-    let context = rollup(sessions, period_days, adapter_status);
-    let prior = rollup(sessions, period_days * 2, vec![]);
+    let context = rollup(sessions, period_days, adapter_status, used_fixtures);
+    let prior = rollup(sessions, period_days * 2, vec![], used_fixtures);
     let mut findings = Vec::new();
 
-    // 1) Tool share shift
+    // 1) Tool share shift — only when share materially INCREASED (not flat / down).
     if let Some(top) = context.by_tool.first() {
         let prior_share = prior
             .by_tool
@@ -20,17 +21,19 @@ pub fn build_insights(
             .find(|t| t.tool == top.tool)
             .map(|t| t.share_pct)
             .unwrap_or(0.0);
-        // Compare this period vs the earlier half of the 2x window roughly via prior full window share
-        if (top.share_pct - prior_share).abs() >= 5.0 || top.share_pct >= 25.0 {
+        let delta = top.share_pct - prior_share;
+        // Material increase only (suppress unchanged e.g. 52%=52%).
+        if delta >= 5.0 {
             findings.push(Finding {
                 title: format!("{} took more of your week", top.tool),
                 summary: format!(
-                    "{} {:.0}% of tokens vs {:.0}% prior {}d",
-                    top.tool, top.share_pct, prior_share, period_days
+                    "{} {:.0}% of tokens vs {:.0}% prior {}d (+{:.0}pp)",
+                    top.tool, top.share_pct, prior_share, period_days, delta
                 ),
                 evidence: format!(
-                    "why this showed: {} tokens this period",
-                    crate::rollups::format_tokens(top.tokens)
+                    "why this showed: {} tokens this period, share up {:.0}pp",
+                    crate::rollups::format_tokens(top.tokens),
+                    delta
                 ),
             });
         }
@@ -51,7 +54,7 @@ pub fn build_insights(
                 .sum();
             findings.push(Finding {
                 title: "Tool accept stayed high".into(),
-                summary: format!("{pct:.0}% accept · {} sessions", context.sessions),
+                summary: format!("{pct:.0}% accept \u{2014} {} sessions", context.sessions),
                 evidence: format!("why this showed: {accepted}/{proposed} proposed tools accepted"),
             });
         }
@@ -62,10 +65,14 @@ pub fn build_insights(
         if t.cost_incomplete || t.tool == "Grok" {
             findings.push(Finding {
                 title: format!("{} cost incomplete", t.tool),
-                summary: "signals lack billable I/O · treat $ as unknown".into(),
+                summary: "signals lack billable I/O \u{2014} treat $ as unknown".into(),
                 evidence: format!(
                     "why this showed: {} tokens, no I/O data",
-                    crate::rollups::format_tokens(t.tokens)
+                    if t.tokens_known {
+                        crate::rollups::format_tokens(t.tokens)
+                    } else {
+                        "unknown".into()
+                    }
                 ),
             });
             break;
@@ -80,24 +87,33 @@ pub fn build_insights(
         {
             findings.push(Finding {
                 title: "Grok cost incomplete".into(),
-                summary: "signals lack billable I/O · treat $ as unknown".into(),
+                summary: "signals lack billable I/O \u{2014} treat $ as unknown".into(),
                 evidence: "why this showed: stub adapter, no billable I/O".into(),
             });
         }
     }
 
-    // 4) Shipping correlation (stub)
-    findings.push(Finding {
-        title: "Shipping clustered midweek".into(),
-        summary: format!(
-            "{} merged PRs · sessions overlapped those days (correlation only)",
-            context.shipping.merged_prs
-        ),
-        evidence: format!(
-            "why this showed: {} PRs, {} sessions in window",
-            context.shipping.merged_prs, context.sessions
-        ),
-    });
+    // 4) Shipping correlation — clearly stub / not observed counts
+    if context.shipping.is_stub {
+        findings.push(Finding {
+            title: "Shipping is a stub placeholder".into(),
+            summary: "Opt-in GitHub shipping is not connected \u{2014} no observed PR/commit counts".into(),
+            evidence: "why this showed: shipping adapter is stub/opt-in only".into(),
+        });
+    } else {
+        findings.push(Finding {
+            title: "Shipping clustered midweek".into(),
+            summary: format!(
+                "{} merged PRs \u{2014} sessions overlapped those days (correlation only)",
+                context.shipping.merged_prs.unwrap_or(0)
+            ),
+            evidence: format!(
+                "why this showed: {} PRs, {} sessions in window",
+                context.shipping.merged_prs.unwrap_or(0),
+                context.sessions
+            ),
+        });
+    }
 
     // 5) Long sessions / model dominance
     let since = Utc::now() - Duration::days(period_days as i64);
@@ -121,22 +137,26 @@ pub fn build_insights(
         }
     }
 
-    // Ensure 3–5 findings
+    // Ensure 3-5 findings
     findings.truncate(5);
     while findings.len() < 3 {
         findings.push(Finding {
             title: "Activity observed locally".into(),
             summary: format!(
-                "{} sessions · {} tokens · est. ${:.0} (estimate)",
+                "{} sessions \u{2014} {} tokens \u{2014} est. ${:.0} (estimate)",
                 context.sessions,
-                crate::rollups::format_tokens(context.tokens),
+                if context.tokens_known {
+                    crate::rollups::format_tokens(context.tokens)
+                } else {
+                    "unknown".into()
+                },
                 context.est_spend_usd
             ),
             evidence: "why this showed: local aggregates for selected period".into(),
         });
     }
 
-    let _ = estimate_spend_usd; // keep import used in docs sense
+    let _ = estimate_spend_usd;
     InsightsPayload {
         period_days,
         findings,
@@ -154,4 +174,3 @@ fn short_model(m: &str) -> String {
         m.split_whitespace().next().unwrap_or(m).to_string()
     }
 }
-
