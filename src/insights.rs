@@ -60,7 +60,7 @@ pub fn build_insights(
         }
     }
 
-    // 3) Incomplete cost signals (Grok / stubs)
+    // 3) Incomplete cost signals (e.g. Grok context tokens only)
     for t in &context.by_tool {
         if t.cost_incomplete || t.tool == "Grok" {
             findings.push(Finding {
@@ -88,7 +88,7 @@ pub fn build_insights(
             findings.push(Finding {
                 title: "Grok cost incomplete".into(),
                 summary: "signals lack billable I/O \u{2014} treat $ as unknown".into(),
-                evidence: "why this showed: stub adapter, no billable I/O".into(),
+                evidence: "why this showed: local Grok signals lack billable I/O".into(),
             });
         }
     }

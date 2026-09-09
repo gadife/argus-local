@@ -49,7 +49,7 @@
 .kpi .val{font-size:28px;font-weight:650;letter-spacing:-.02em}
 .kpi .sub{color:var(--dim);font-size:12px;margin-top:4px}
 .section-title{font-size:13px;color:var(--muted);margin:6px 0 10px;font-weight:600}
-.bytool{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.bytool{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
 .toolcard{position:relative;overflow:hidden}
 .toolcard .name{display:flex;align-items:center;gap:8px;font-weight:600;margin-bottom:8px}
 .toolcard .tok{font-size:14px}
@@ -149,7 +149,8 @@ async function load(){
   render();
 }
 function statusHtml(st){
-  return (st||[]).map(s=>{
+  // Only real adapter names with discovered data — never invent Codex/etc stubs
+  return (st||[]).filter(s=>s && s.name && s.name!=='partial').map(s=>{
     const warn=s.partial||!s.ok;
     return `<span class="badge"><span class="dot ${warn?'warn':''}"></span>${esc(s.name)}</span>`;
   }).join('');

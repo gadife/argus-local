@@ -124,10 +124,10 @@ pub fn fixture_statuses() -> Vec<AdapterStatus> {
             detail: "fixture demo data".into(),
         },
         AdapterStatus {
-            name: "partial".into(),
-            ok: false,
+            name: "Grok".into(),
+            ok: true,
             partial: true,
-            detail: "Grok cost incomplete".into(),
+            detail: "fixture demo data (cost incomplete)".into(),
         },
     ]
 }
