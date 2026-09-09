@@ -399,6 +399,18 @@ pub fn write_proof_screens(store: SessionStore, days: u32, dir: &Path) -> Result
 
     for (page, name) in [(Page::Today, "tui-today"), (Page::Activity, "tui-activity"), (Page::Insights, "tui-insights"), (Page::Shipping, "tui-shipping")] {
         app.page = page;
+        if page == Page::Activity {
+            // Prefer an incomplete/Grok-style row so proof shows tokens/context labeling.
+            if let Some(i) = app
+                .today
+                .activity
+                .iter()
+                .position(|a| !a.cost_complete)
+            {
+                app.activity_idx = i;
+                app.activity_detail = true;
+            }
+        }
         let backend = ratatui::backend::TestBackend::new(width, height);
         let mut terminal = Terminal::new(backend)?;
         terminal.draw(|f| draw(f, &app))?;
@@ -987,20 +999,26 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
                     a.model.clone()
                 },
             );
-            push_kv(
-                &mut lines,
-                "tokens",
-                if a.tokens_known {
+            let (tok_key, tok_val) = if !a.tokens_known {
+                ("tokens", "\u{2014}".to_string())
+            } else if !a.cost_complete {
+                // Grok-style / incomplete: context tokens — not billable in/out
+                (
+                    "tokens/context",
+                    format!("{} context (not billable in/out)", tok_label(a.tokens, true)),
+                )
+            } else {
+                (
+                    "tokens",
                     format!(
                         "{} (in {} / out {})",
                         tok_label(a.tokens, true),
                         tok_label(a.input_tokens, true),
                         tok_label(a.output_tokens, true)
-                    )
-                } else {
-                    "\u{2014}".into()
-                },
-            );
+                    ),
+                )
+            };
+            push_kv(&mut lines, tok_key, tok_val);
             push_kv(&mut lines, "tools prop.", a.tools_proposed.to_string());
             push_kv(&mut lines, "tools accept", a.tools_accepted.to_string());
             push_kv(

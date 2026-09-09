@@ -277,7 +277,7 @@ function renderSettings(){
 function hideField(v){return v==null||v===''||v===undefined}
 function sessionDetailHtml(a){
   if(!a) return '<p style="color:var(--dim);margin:0">Select a session for aggregates (no prompts or code).</p>';
-  const tok=a.tokens_known?`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">(in ${fmtTok(a.input_tokens)} / out ${fmtTok(a.output_tokens)})</span>`:'—';
+  const tok=(!a.tokens_known)?'—':(!a.cost_complete?`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">context (not billable in/out)</span>`:`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">(in ${fmtTok(a.input_tokens)} / out ${fmtTok(a.output_tokens)})</span>`);
   const cost=a.cost_complete?(a.tokens_known?fmtUsd(a.est_spend_usd)+' <span style="color:var(--dim);font-weight:400">estimate</span>':'—'):'incomplete';
   const dur=a.duration?esc(a.duration):'—';
   const note=a.adapter_note?`<div class="detail-note">${esc(a.adapter_note)}</div>`:'';
@@ -290,14 +290,14 @@ function sessionDetailHtml(a){
     <div><div class="k">Duration</div><div class="v">${dur}</div></div>
     <div><div class="k">Tool</div><div class="v">${esc(a.tool)}</div></div>
     <div><div class="k">Model</div><div class="v">${esc(a.model)||'—'}</div></div>
-    <div><div class="k">Tokens</div><div class="v">${tok}</div></div>
+    <div><div class="k">${a.cost_complete?'Tokens':'Tokens / context'}</div><div class="v">${tok}</div></div>
     <div><div class="k">Tools proposed</div><div class="v">${a.tools_proposed!=null?a.tools_proposed:'—'}</div></div>
     <div><div class="k">Tools accepted</div><div class="v">${a.tools_accepted!=null?a.tools_accepted:'—'}</div></div>
     <div><div class="k">Cost complete</div><div class="v">${a.cost_complete?'yes':'no'}</div></div>
     <div><div class="k">Est. spend</div><div class="v">${cost}</div></div>
   </div>${partial}${note}<p class="detail-note">aggregates only — no raw prompts or code — local-first</p>`;
 }
-let SELECTED_SESSION=null;
+let SELECTED_SESSION=(new URLSearchParams(location.search).get('sid')||null);
 function renderActivity(){
   const d=DATA.today;
   $('#title').textContent=`Activity — Last ${DAYS} days`;
