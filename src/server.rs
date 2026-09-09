@@ -26,7 +26,7 @@ pub fn serve(addr: &str, store: Arc<Mutex<SessionStore>>) -> Result<()> {
         let path = url_raw.split('?').next().unwrap_or("/").to_string();
         let method = request.method().clone();
         let response = match (method, path.as_str()) {
-            (Method::Get, "/") | (Method::Get, "/index.html") | (Method::Get, "/today") | (Method::Get, "/insights") | (Method::Get, "/shipping") | (Method::Get, "/settings") => {
+            (Method::Get, "/") | (Method::Get, "/index.html") | (Method::Get, "/today") | (Method::Get, "/activity") | (Method::Get, "/insights") | (Method::Get, "/shipping") | (Method::Get, "/settings") => {
                 Response::from_string(HTML)
                     .with_header(Header::from_bytes(&b"Content-Type"[..], &b"text/html; charset=utf-8"[..]).unwrap())
             }
