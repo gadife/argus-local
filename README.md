@@ -1,6 +1,6 @@
 # Argus Local
 
-One-process **local-first** dashboard for engineers. A single Rust binary (`argus-local`) reads local Claude Code / Cursor session data (Codex/Grok stubs in v1), indexes into SQLite, rolls up metrics + deterministic insights, and serves an embedded HTML UI on `127.0.0.1` — or a full-screen terminal UI via `argus-local tui`.
+One-process **local-first** dashboard for engineers. A single Rust binary (`argus-local`) reads local Claude Code / Cursor / Grok session data from disk (absent tools like Codex are hidden — no stub pills), indexes into SQLite, rolls up metrics + deterministic insights, and serves an embedded HTML UI on `127.0.0.1` — or a full-screen terminal UI via `argus-local tui`.
 
 > **Language lock**
 > - `estimates ≠ invoice`
@@ -62,10 +62,10 @@ SQLite index: `%LOCALAPPDATA%/argus-local/index.sqlite` (Windows) or platform eq
 |------|--------|-------|
 | Claude Code | `~/.claude/**/*.jsonl` (+ best-effort AppData) | Real parser |
 | Cursor | `state.vscdb` / ai-tracking under Cursor User storage | Best-effort; copies DB to avoid locks |
-| Codex | Stub | Empty unless fixtures |
-| Grok | Stub | Marked **cost incomplete** |
+| Codex | Hidden when absent | No local adapter in v1 — never invent stub rows |
+| Grok | `~/.grok/sessions/**/signals.json` (+ summary) | Live from disk; context tokens; marked **cost incomplete** |
 
-If no Claude/Cursor sessions are found, **fixture demo data** loads automatically so the UI always demos.
+If no Claude/Cursor/Grok sessions are found, **fixture demo data** loads automatically so the UI always demos.
 
 ## UI
 
@@ -79,7 +79,7 @@ Same data path as HTML (adapters → SQLite → rollups/insights). Renders whole
 
 ## Out of scope (v1)
 
-Real Codex/Grok adapters, org Share bridge, GitHub shipping join, native GUI, Node sidecar, Docker.
+Real Codex adapter, org Share bridge, GitHub shipping join, native GUI, Node sidecar, Docker.
 
 ## License
 
