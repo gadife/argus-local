@@ -70,6 +70,10 @@ struct App {
     github_configured: bool,
     github_auth_source: Option<String>,
     github_login: Option<String>,
+    /// Selected row on Activity page (into today.activity).
+    activity_idx: usize,
+    /// When true, Activity shows the selected session detail pane focus.
+    activity_detail: bool,
     should_quit: bool,
 }
 
@@ -112,8 +116,34 @@ impl App {
             github_configured: store.github_configured,
             github_auth_source: store.github_auth_source,
             github_login: store.github_login,
+            activity_idx: 0,
+            activity_detail: false,
             should_quit: false,
         }
+    }
+
+
+    fn activity_len(&self) -> usize {
+        self.today.activity.len()
+    }
+
+    fn clamp_activity(&mut self) {
+        let n = self.activity_len();
+        if n == 0 {
+            self.activity_idx = 0;
+            self.activity_detail = false;
+        } else if self.activity_idx >= n {
+            self.activity_idx = n - 1;
+        }
+    }
+
+    fn select_activity_delta(&mut self, delta: isize) {
+        let n = self.activity_len();
+        if n == 0 {
+            return;
+        }
+        let cur = self.activity_idx as isize + delta;
+        self.activity_idx = cur.clamp(0, (n as isize) - 1) as usize;
     }
 
     fn recompute(&mut self) {
@@ -141,6 +171,7 @@ impl App {
                 login: self.github_login.as_deref(),
             },
         );
+            self.clamp_activity();
     }
 
     fn next_page(&mut self) {
@@ -274,22 +305,79 @@ fn loop_ui<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
                     continue;
                 }
                 match key.code {
-                    KeyCode::Char('q') | KeyCode::Esc => app.should_quit = true,
-                    KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => app.next_page(),
-                    KeyCode::BackTab | KeyCode::Left | KeyCode::Char('h') => app.prev_page(),
-                    KeyCode::Char('1') => app.page = Page::Today,
-                    KeyCode::Char('2') => app.page = Page::Activity,
-                    KeyCode::Char('3') => app.page = Page::Tools,
-                    KeyCode::Char('4') => app.page = Page::Insights,
-                    KeyCode::Char('5') => app.page = Page::Shipping,
-                    KeyCode::Char('6') => app.page = Page::Share,
-                    KeyCode::Char('7') => app.page = Page::Settings,
-                    KeyCode::Char('d') | KeyCode::Char('[') | KeyCode::Char(']') => {
-                        app.cycle_days()
+                    KeyCode::Char('q') => app.should_quit = true,
+                    KeyCode::Esc => {
+                        if app.page == Page::Activity && app.activity_detail {
+                            app.activity_detail = false;
+                        } else {
+                            app.should_quit = true;
+                        }
                     }
-                    KeyCode::Char('!') => app.set_days(1),
-                    KeyCode::Char('@') => app.set_days(7),
-                    KeyCode::Char('#') => app.set_days(30),
+                    KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => {
+                        app.activity_detail = false;
+                        app.next_page();
+                    }
+                    KeyCode::BackTab | KeyCode::Left | KeyCode::Char('h') => {
+                        app.activity_detail = false;
+                        app.prev_page();
+                    }
+                    KeyCode::Char('1') => {
+                        app.activity_detail = false;
+                        app.page = Page::Today;
+                    }
+                    KeyCode::Char('2') => app.page = Page::Activity,
+                    KeyCode::Char('3') => {
+                        app.activity_detail = false;
+                        app.page = Page::Tools;
+                    }
+                    KeyCode::Char('4') => {
+                        app.activity_detail = false;
+                        app.page = Page::Insights;
+                    }
+                    KeyCode::Char('5') => {
+                        app.activity_detail = false;
+                        app.page = Page::Shipping;
+                    }
+                    KeyCode::Char('6') => {
+                        app.activity_detail = false;
+                        app.page = Page::Share;
+                    }
+                    KeyCode::Char('7') => {
+                        app.activity_detail = false;
+                        app.page = Page::Settings;
+                    }
+                    KeyCode::Char('d') | KeyCode::Char('[') | KeyCode::Char(']') => {
+                        app.cycle_days();
+                        app.clamp_activity();
+                    }
+                    KeyCode::Char('!') => {
+                        app.set_days(1);
+                        app.clamp_activity();
+                    }
+                    KeyCode::Char('@') => {
+                        app.set_days(7);
+                        app.clamp_activity();
+                    }
+                    KeyCode::Char('#') => {
+                        app.set_days(30);
+                        app.clamp_activity();
+                    }
+                    KeyCode::Up | KeyCode::Char('k') if app.page == Page::Activity => {
+                        app.select_activity_delta(-1);
+                    }
+                    KeyCode::Down | KeyCode::Char('j') if app.page == Page::Activity => {
+                        app.select_activity_delta(1);
+                    }
+                    KeyCode::Enter if app.page == Page::Activity => {
+                        if app.activity_len() > 0 {
+                            app.activity_detail = true;
+                        }
+                    }
+                    KeyCode::Enter if app.page == Page::Today => {
+                        // Optional: jump to Activity with first row selected
+                        app.page = Page::Activity;
+                        app.activity_detail = app.activity_len() > 0;
+                    }
                     _ => {}
                 }
             }
@@ -309,8 +397,20 @@ pub fn write_proof_screens(store: SessionStore, days: u32, dir: &Path) -> Result
     let height = 40u16;
     let mut out_paths = Vec::new();
 
-    for (page, name) in [(Page::Today, "tui-today"), (Page::Insights, "tui-insights"), (Page::Shipping, "tui-shipping")] {
+    for (page, name) in [(Page::Today, "tui-today"), (Page::Activity, "tui-activity"), (Page::Insights, "tui-insights"), (Page::Shipping, "tui-shipping")] {
         app.page = page;
+        if page == Page::Activity {
+            // Prefer an incomplete/Grok-style row so proof shows tokens/context labeling.
+            if let Some(i) = app
+                .today
+                .activity
+                .iter()
+                .position(|a| !a.cost_complete)
+            {
+                app.activity_idx = i;
+                app.activity_detail = true;
+            }
+        }
         let backend = ratatui::backend::TestBackend::new(width, height);
         let mut terminal = Terminal::new(backend)?;
         terminal.draw(|f| draw(f, &app))?;
@@ -362,6 +462,7 @@ fn draw(f: &mut Frame, app: &App) {
     draw_status(f, chunks[3], app);
     match app.page {
         Page::Today => draw_today(f, chunks[4], app),
+        Page::Activity => draw_activity(f, chunks[4], app),
         Page::Insights => draw_insights(f, chunks[4], app),
         Page::Shipping => draw_shipping(f, chunks[4], app),
         Page::Settings => draw_settings(f, chunks[4], app),
@@ -407,6 +508,7 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
         Page::Insights => app.insights.language_lock.observations_note.clone(),
         Page::Shipping => app.today.language_lock.shipping_note.clone(),
         Page::Settings => "opt-in GitHub - never invent when unconfigured".into(),
+        Page::Activity => LanguageLock::default().observations_note,
         _ => LanguageLock::default().observations_note,
     };
     let period_chip = format!(" {}d ", app.days);
@@ -472,7 +574,8 @@ fn keymap_for(page: Page) -> &'static str {
     match page {
         Page::Today => "tab/hl pages \u{00b7} d period \u{00b7} 1 today \u{00b7} 4 insights \u{00b7} q quit",
         Page::Insights => "tab/hl pages \u{00b7} d period \u{00b7} 1 today \u{00b7} 4 insights \u{00b7} q quit",
-        Page::Activity | Page::Tools => "stub view \u{00b7} tab/hl pages \u{00b7} 1 today \u{00b7} 4 insights \u{00b7} q quit",
+        Page::Activity => "j/k select \u{00b7} Enter detail \u{00b7} Esc back \u{00b7} tab/hl \u{00b7} q quit",
+        Page::Tools => "stub view \u{00b7} tab/hl pages \u{00b7} 1 today \u{00b7} 4 insights \u{00b7} q quit",
         Page::Shipping => "shipping \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
         Page::Share => "share off (v1) \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
         Page::Settings => "settings - github opt-in \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
@@ -593,7 +696,7 @@ fn draw_today(f: &mut Frame, area: Rect, app: &App) {
                 Cell::from(a.tool.clone()),
                 Cell::from(a.model.clone()).style(muted()),
                 Cell::from(tok_label(a.tokens, a.tokens_known)),
-                Cell::from(usd_label(a.est_spend_usd, a.tokens_known)).style(dim()),
+                Cell::from(usd_label(a.est_spend_usd, a.tokens_known && a.cost_complete)).style(dim()),
             ])
         })
         .collect();
@@ -799,6 +902,158 @@ fn draw_settings(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }).block(panel("settings")), area);
 }
 
+
+
+fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
+    let list = &app.today.activity;
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(58), Constraint::Percentage(42)])
+        .split(area);
+
+    let header = Row::new(vec!["time", "tool", "model", "tokens", "dur"]).style(dim());
+    let rows: Vec<Row> = list
+        .iter()
+        .enumerate()
+        .map(|(i, a)| {
+            let style = if i == app.activity_idx {
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Rgb(74, 222, 128))
+            } else {
+                Style::default()
+            };
+            Row::new(vec![
+                Cell::from(a.time_range.clone()),
+                Cell::from(a.tool.clone()),
+                Cell::from(if a.model.is_empty() {
+                    "\u{2014}".into()
+                } else {
+                    a.model.clone()
+                }),
+                Cell::from(tok_label(a.tokens, a.tokens_known)),
+                Cell::from(if a.duration.is_empty() {
+                    "\u{2014}".into()
+                } else {
+                    a.duration.clone()
+                }),
+            ])
+            .style(style)
+        })
+        .collect();
+    let table = Table::new(
+        rows,
+        [
+            Constraint::Length(13),
+            Constraint::Length(10),
+            Constraint::Min(12),
+            Constraint::Length(8),
+            Constraint::Length(8),
+        ],
+    )
+    .header(header)
+    .block(panel("sessions \u{00b7} aggregates only"));
+    f.render_widget(table, cols[0]);
+
+    let selected = list.get(app.activity_idx);
+    let mut lines: Vec<Line> = Vec::new();
+    match selected {
+        None => {
+            lines.push(Line::from(Span::styled(
+                "No sessions in period",
+                muted(),
+            )));
+        }
+        Some(a) => {
+            let title = if app.activity_detail {
+                "session detail"
+            } else {
+                "session detail \u{00b7} Enter"
+            };
+            lines.push(Line::from(Span::styled(title, dim())));
+            lines.push(Line::from(""));
+            let push_kv = |lines: &mut Vec<Line>, k: &str, v: String| {
+                lines.push(Line::from(vec![
+                    Span::styled(format!("{:<14}", k), dim()),
+                    Span::styled(v, Style::default().fg(Color::White)),
+                ]));
+            };
+            push_kv(&mut lines, "id", a.id.clone());
+            push_kv(&mut lines, "started", a.started_at.clone());
+            push_kv(
+                &mut lines,
+                "duration",
+                if a.duration.is_empty() {
+                    "\u{2014}".into()
+                } else {
+                    a.duration.clone()
+                },
+            );
+            push_kv(&mut lines, "tool", a.tool.clone());
+            push_kv(
+                &mut lines,
+                "model",
+                if a.model.is_empty() {
+                    "\u{2014}".into()
+                } else {
+                    a.model.clone()
+                },
+            );
+            let (tok_key, tok_val) = if !a.tokens_known {
+                ("tokens", "\u{2014}".to_string())
+            } else if !a.cost_complete {
+                // Grok-style / incomplete: context tokens — not billable in/out
+                (
+                    "tokens/context",
+                    format!("{} context (not billable in/out)", tok_label(a.tokens, true)),
+                )
+            } else {
+                (
+                    "tokens",
+                    format!(
+                        "{} (in {} / out {})",
+                        tok_label(a.tokens, true),
+                        tok_label(a.input_tokens, true),
+                        tok_label(a.output_tokens, true)
+                    ),
+                )
+            };
+            push_kv(&mut lines, tok_key, tok_val);
+            push_kv(&mut lines, "tools prop.", a.tools_proposed.to_string());
+            push_kv(&mut lines, "tools accept", a.tools_accepted.to_string());
+            push_kv(
+                &mut lines,
+                "cost",
+                if a.cost_complete { "complete".into() } else { "incomplete".into() },
+            );
+            push_kv(
+                &mut lines,
+                "est. spend",
+                if a.cost_complete && a.tokens_known {
+                    usd_label(a.est_spend_usd, true)
+                } else {
+                    "\u{2014}".into()
+                },
+            );
+            push_kv(&mut lines, "source", a.source.clone());
+            if !a.adapter_note.is_empty() {
+                lines.push(Line::from(""));
+                lines.push(Line::from(Span::styled(a.adapter_note.clone(), warn())));
+            }
+            lines.push(Line::from(""));
+            lines.push(Line::from(Span::styled(
+                "no raw prompts or code",
+                dim(),
+            )));
+        }
+    }
+    f.render_widget(
+        Paragraph::new(lines)
+            .wrap(Wrap { trim: true })
+            .block(panel("detail")),
+        cols[1],
+    );
+}
 
 fn draw_stub(f: &mut Frame, area: Rect, page: Page) {
     let name = page.title();

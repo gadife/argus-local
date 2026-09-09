@@ -66,11 +66,25 @@ pub struct ToolRollup {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ActivityRow {
+    /// Session id for Activity drill-in (aggregates only — never prompts/code).
+    pub id: String,
     pub time_range: String,
+    pub started_at: String,
+    pub ended_at: String,
+    /// Human duration like "12m" / "1h 3m"; empty if unknown.
+    pub duration: String,
     pub tool: String,
     pub model: String,
     pub tokens: i64,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
     pub tokens_known: bool,
+    pub tools_proposed: i64,
+    pub tools_accepted: i64,
+    pub cost_complete: bool,
+    pub source: String,
+    /// Adapter partial/missing note when applicable; empty otherwise.
+    pub adapter_note: String,
     pub est_spend_usd: f64,
 }
 

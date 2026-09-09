@@ -112,16 +112,47 @@ pub fn rollup(
 
     let activity: Vec<ActivityRow> = filtered
         .iter()
-        .take(12)
+        .take(50)
         .map(|s| {
-            let start = s.started_at.format("%H:%M").to_string();
+            let start = s.started_at.format("%Y-%m-%d %H:%M").to_string();
             let end = s.ended_at.format("%H:%M").to_string();
+            let start_hm = s.started_at.format("%H:%M").to_string();
+            let secs = (s.ended_at - s.started_at).num_seconds().max(0);
+            let duration = if secs >= 3600 {
+                format!("{}h {}m", secs / 3600, (secs % 3600) / 60)
+            } else if secs >= 60 {
+                format!("{}m", secs / 60)
+            } else if secs > 0 {
+                format!("{secs}s")
+            } else {
+                String::new()
+            };
+            let adapter_note = adapter_status
+                .iter()
+                .find(|a| {
+                    a.name.eq_ignore_ascii_case(&s.tool)
+                        || a.name.eq_ignore_ascii_case(&s.source)
+                })
+                .filter(|a| a.partial || !a.ok)
+                .map(|a| a.detail.clone())
+                .unwrap_or_default();
             ActivityRow {
-                time_range: format!("{start} - {end}"),
+                id: s.id.clone(),
+                time_range: format!("{start_hm} - {end}"),
+                started_at: start,
+                ended_at: s.ended_at.format("%Y-%m-%d %H:%M").to_string(),
+                duration,
                 tool: s.tool.clone(),
                 model: s.model.clone(),
                 tokens: s.total_tokens(),
+                input_tokens: if s.tokens_known { s.input_tokens } else { 0 },
+                output_tokens: if s.tokens_known { s.output_tokens } else { 0 },
                 tokens_known: s.tokens_known,
+                tools_proposed: s.tools_proposed,
+                tools_accepted: s.tools_accepted,
+                cost_complete: s.cost_complete,
+                source: s.source.clone(),
+                adapter_note,
                 est_spend_usd: if s.cost_complete && s.tokens_known {
                     estimate_spend_usd(&s.model, s.input_tokens, s.output_tokens)
                 } else {

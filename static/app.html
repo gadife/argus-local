@@ -22,6 +22,16 @@
 .nav button:hover{background:#161616;color:var(--text)}
 .nav button.active{background:var(--green-dim);color:#fff;font-weight:600}
 .nav .ico{width:16px;opacity:.85}
+.table tr.sel{background:var(--green-dim);cursor:pointer}
+.table tbody tr{cursor:pointer}
+.table tbody tr:hover{background:#161616}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:8px}
+.detail-grid .k{color:var(--dim);font-size:12px}
+.detail-grid .v{color:var(--text);font-size:14px;font-weight:600}
+.detail-note{margin-top:14px;color:var(--dim);font-size:12px;line-height:1.45}
+.act-layout{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+@media (max-width:900px){.act-layout{grid-template-columns:1fr}}
+
 .sidebar-foot{margin-top:auto;padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card2)}
 .share-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
 .pill{background:#222;border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:11px;color:var(--text)}
@@ -179,10 +189,10 @@ function renderToday(){
       <div class="bar"><i class="${t.cost_incomplete?'warn':''}" style="width:${barW}%"></i></div>
     </div>`;
   }).join('');
-  const rows=d.activity.map(a=>`<tr>
+  const rows=d.activity.slice(0,12).map(a=>`<tr data-sid="${esc(a.id)}" title="Open in Activity">
     <td>${esc(a.time_range)}</td><td>${esc(a.tool)}</td><td>${esc(a.model)}</td>
     <td>${fmtTokKnown(a.tokens,a.tokens_known)} tokens</td>
-    <td>${a.tokens_known?fmtUsd(a.est_spend_usd):'—'}</td></tr>`).join('');
+    <td>${a.cost_complete&&a.tokens_known?fmtUsd(a.est_spend_usd):'—'}</td></tr>`).join('');
   const ship=d.shipping||{};
   const stubTag=ship.is_stub?'<span class="stub-tag">unconfigured</span>':'';
   $('#content').innerHTML=`
@@ -263,6 +273,69 @@ function renderSettings(){
   syncFixtureBanner();
   $('#content').innerHTML='<div class="card"><div class="section-title" style="margin-top:0">GitHub shipping</div><p style="color:var(--muted)">Configured now: <strong style="color:var(--text)">'+(cfg?'yes':'no')+'</strong>'+(ship.login?(' · '+esc(ship.login)+' via '+esc(ship.auth_source||'?')):'')+'</p><p style="color:var(--muted);font-size:13px">How to configure (secrets stay on this machine - never commit PATs):</p><ol style="color:var(--muted);font-size:13px;line-height:1.6"><li>Set env <code>ARGUS_GITHUB_TOKEN</code> to a personal PAT, or</li><li>Set <code>ARGUS_GITHUB_ENABLED=1</code> and use authenticated <code>gh</code>, or</li><li>Write <code>{"github":{"enabled":true}}</code> to <code>%LOCALAPPDATA%/argus-local/settings.json</code> (uses gh/token; no secret in the repo).</li></ol><p style="color:var(--dim);font-size:12px">When unconfigured, Shipping shows dashes - no fake stub counts. Share Off default.</p></div>';
 }
+
+function hideField(v){return v==null||v===''||v===undefined}
+function sessionDetailHtml(a){
+  if(!a) return '<p style="color:var(--dim);margin:0">Select a session for aggregates (no prompts or code).</p>';
+  const tok=(!a.tokens_known)?'—':(!a.cost_complete?`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">context (not billable in/out)</span>`:`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">(in ${fmtTok(a.input_tokens)} / out ${fmtTok(a.output_tokens)})</span>`);
+  const cost=a.cost_complete?(a.tokens_known?fmtUsd(a.est_spend_usd)+' <span style="color:var(--dim);font-weight:400">estimate</span>':'—'):'incomplete';
+  const dur=a.duration?esc(a.duration):'—';
+  const note=a.adapter_note?`<div class="detail-note">${esc(a.adapter_note)}</div>`:'';
+  const partial=a.cost_complete?'':'<div class="warn-tag" style="display:inline-block;margin-top:8px">cost incomplete</div>';
+  return `<div class="detail-grid">
+    <div><div class="k">Session id</div><div class="v" style="font-weight:500;font-size:12px;word-break:break-all">${esc(a.id)}</div></div>
+    <div><div class="k">Source</div><div class="v">${esc(a.source||a.tool)}</div></div>
+    <div><div class="k">Started</div><div class="v">${esc(a.started_at||a.time_range)}</div></div>
+    <div><div class="k">Ended</div><div class="v">${esc(a.ended_at||'—')}</div></div>
+    <div><div class="k">Duration</div><div class="v">${dur}</div></div>
+    <div><div class="k">Tool</div><div class="v">${esc(a.tool)}</div></div>
+    <div><div class="k">Model</div><div class="v">${esc(a.model)||'—'}</div></div>
+    <div><div class="k">${a.cost_complete?'Tokens':'Tokens / context'}</div><div class="v">${tok}</div></div>
+    <div><div class="k">Tools proposed</div><div class="v">${a.tools_proposed!=null?a.tools_proposed:'—'}</div></div>
+    <div><div class="k">Tools accepted</div><div class="v">${a.tools_accepted!=null?a.tools_accepted:'—'}</div></div>
+    <div><div class="k">Cost complete</div><div class="v">${a.cost_complete?'yes':'no'}</div></div>
+    <div><div class="k">Est. spend</div><div class="v">${cost}</div></div>
+  </div>${partial}${note}<p class="detail-note">aggregates only — no raw prompts or code — local-first</p>`;
+}
+let SELECTED_SESSION=(new URLSearchParams(location.search).get('sid')||null);
+function renderActivity(){
+  const d=DATA.today;
+  $('#title').textContent=`Activity — Last ${DAYS} days`;
+  $('#lockLine').textContent=(d.language_lock&&d.language_lock.observations_note)||'Local only — observations, not a score';
+  $('#status').innerHTML=statusHtml(d.adapter_status);
+  syncFixtureBanner();
+  const list=(d.activity||[]);
+  if(SELECTED_SESSION && !list.some(a=>a.id===SELECTED_SESSION)) SELECTED_SESSION=null;
+  if(!SELECTED_SESSION && list.length) SELECTED_SESSION=list[0].id;
+  const rows=list.map(a=>{
+    const sel=a.id===SELECTED_SESSION?' sel':'';
+    return `<tr class="${sel.trim()}" data-sid="${esc(a.id)}">
+      <td>${esc(a.time_range)}</td><td>${esc(a.tool)}</td><td>${esc(a.model)||'—'}</td>
+      <td>${fmtTokKnown(a.tokens,a.tokens_known)}</td>
+      <td>${a.duration?esc(a.duration):'—'}</td>
+      <td>${a.cost_complete?'':'!'}</td></tr>`;
+  }).join('');
+  const selected=list.find(a=>a.id===SELECTED_SESSION);
+  $('#content').innerHTML=`
+    <div class="act-layout">
+      <div class="card">
+        <div class="section-title" style="margin-top:0">Sessions</div>
+        <table class="table" id="actTable"><thead><tr><th>Time</th><th>Tool</th><th>Model</th><th>Tokens</th><th>Dur</th><th></th></tr></thead>
+        <tbody>${rows||'<tr><td colspan="6" style="color:var(--dim)">No sessions in period</td></tr>'}</tbody></table>
+      </div>
+      <div class="card">
+        <div class="section-title" style="margin-top:0">Session detail</div>
+        ${sessionDetailHtml(selected)}
+      </div>
+    </div>`;
+  const table=$('#actTable');
+  if(table) table.addEventListener('click',e=>{
+    const tr=e.target.closest('tr[data-sid]'); if(!tr)return;
+    SELECTED_SESSION=tr.getAttribute('data-sid');
+    renderActivity();
+  });
+}
+
 function renderStub(name){
   $('#title').textContent=name+' — stub';
   $('#lockLine').textContent='Local only — observations, not a score';
@@ -273,10 +346,22 @@ function renderStub(name){
 function render(){
   if(!DATA)return;
   if(PAGE==='today')renderToday();
+  else if(PAGE==='activity')renderActivity();
   else if(PAGE==='insights')renderInsights();
   else if(PAGE==='shipping')renderShipping();
   else if(PAGE==='settings')renderSettings();
   else renderStub(PAGE[0].toUpperCase()+PAGE.slice(1));
+  // Today activity rows → Activity drill-in
+  const todayTable=$('#content table.table');
+  if(PAGE==='today' && todayTable){
+    todayTable.addEventListener('click',e=>{
+      const tr=e.target.closest('tr[data-sid]'); if(!tr)return;
+      SELECTED_SESSION=tr.getAttribute('data-sid');
+      PAGE='activity';
+      [...$('#nav').querySelectorAll('button')].forEach(x=>x.classList.toggle('active',x.dataset.page==='activity'));
+      render();
+    });
+  }
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 $('#nav').addEventListener('click',e=>{
