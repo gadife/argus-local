@@ -1,0 +1,60 @@
+ Argus Local                                                                                        
+  Today  │  Activity  │  Tools  │  Insights  │  Shipping  │  Share  │  Settings                     
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Shipping  7d   correlation with sessions — not a productivity score                                 
+ adapters  Grok · partial     Share · Off                                                           
+                                                                                                    
+┌ shipping ────────────────────────────────────────────────────────────────────────────────────────┐
+│Shipping — unconfigured                                                                           │
+│                                                                                                  │
+│merged PRs      —                                                                                 │
+│commits         —                                                                                 │
+│files touched   —                                                                                 │
+│                                                                                                  │
+│GitHub shipping not configured — enable github.enabled in                                         │
+│C:\Users\Gadi\AppData\Local\argus-local\settings.json or set ARGUS_GITHUB_TOKEN /                 │
+│ARGUS_GITHUB_ENABLED (uses gh when authenticated). No observed PR/commit counts.                  │
+│                                                                                                  │
+│correlation with sessions — not a productivity score                                              │
+│estimates ≠ invoice · observations, not a score · Share Off default                               │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  │  shipping · tab/hl · 1 today · q quit     

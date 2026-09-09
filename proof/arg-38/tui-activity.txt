@@ -1,0 +1,60 @@
+ Argus Local                                                                                        
+  Today  │  Activity  │  Tools  │  Insights  │  Shipping  │  Share  │  Settings                     
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Activity  7d   Local only — observations, not a score                                               
+ adapters  Grok · partial     Share · Off                                                           
+                                                                                                    
+┌ sessions · aggregates only ────────────────────────────┐┌ detail ────────────────────────────────┐
+│time          tool       model         tokens   dur     ││session detail                          │
+│21:42 - 21:43 Grok       grok-4.6      7.0K     1m      ││                                        │
+│21:30 - 21:33 Grok       grok-4.6      38.9K    2m      ││id                                      │
+│20:29 - 20:31 Grok       grok-4.6      21.2K    1m      ││grok:01a0881e-e77a-78e3-a262-6cdb294be82│
+│                                                        ││5                                       │
+│                                                        ││title           ARG-37 Live Demo Exact  │
+│                                                        ││PING ONE Reply                          │
+│                                                        ││kind            headless                │
+│                                                        ││cwd                                     │
+│                                                        ││C:\Users\Gadi\Downloads\argus-local-arg-│
+│                                                        ││37-live                                 │
+│                                                        ││tool            Grok                    │
+│                                                        ││model           grok-4.6                │
+│                                                        ││                                        │
+│                                                        ││Context                                 │
+│                                                        ││used/window     7.0K / 500.0K (1.4%)    │
+│                                                        ││Context = window fill (not billable     │
+│                                                        ││in/out). Billable I/O from turn usage   │
+│                                                        ││when present.                           │
+│                                                        ││                                        │
+│                                                        ││Billable I/O                            │
+│                                                        ││input           34.3K                   │
+│                                                        ││output          65                      │
+│                                                        ││total           34.4K                   │
+│                                                        ││reasoning       53                      │
+│                                                        ││model calls     2                       │
+│                                                        ││api ms          11852                   │
+│                                                        ││est. spend      $0.0794 estimate ≠      │
+│                                                        ││invoice                                 │
+│                                                        ││                                        │
+│                                                        ││Cache                                   │
+│                                                        ││cached read     14.8K                   │
+│                                                        ││cache create    0                       │
+│                                                        ││                                        │
+│                                                        ││Signals                                 │
+│                                                        ││turns           2                       │
+│                                                        ││tool calls      0                       │
+│                                                        ││avg TTFT        2567 ms                 │
+│                                                        ││avg resp        2575 ms                 │
+│                                                        ││duration s      59                      │
+│                                                        ││                                        │
+│                                                        ││42 sessions from ~/.grok (context       │
+│                                                        ││tokens; cost incomplete)                │
+│                                                        ││                                        │
+│                                                        ││no raw prompts or code · estimates ≠    │
+│                                                        ││invoice                                 │
+│                                                        ││                                        │
+│                                                        ││                                        │
+│                                                        ││                                        │
+│                                                        ││                                        │
+└────────────────────────────────────────────────────────┘└────────────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  │  j/k select · Enter detail · Esc back · ta

@@ -28,7 +28,7 @@
 .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;margin-top:8px}
 .detail-grid .k{color:var(--dim);font-size:12px}
 .detail-grid .v{color:var(--text);font-size:14px;font-weight:600}
-.detail-note{margin-top:14px;color:var(--dim);font-size:12px;line-height:1.45}
+.tel-sec{margin-top:14px}.tel-sec .section-title{margin-top:0}.detail-note{margin-top:14px;color:var(--dim);font-size:12px;line-height:1.45}
 .act-layout{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
 @media (max-width:900px){.act-layout{grid-template-columns:1fr}}
 
@@ -355,48 +355,98 @@ function renderSettings(){
 }
 
 function hideField(v){return v==null||v===''||v===undefined}
+function fmtNum(n){if(n==null)return null;return Number(n).toLocaleString()}
+function fmtPct(p){if(p==null)return null;return (Math.round(p*10)/10)+'%'}
+function fmtMs(n){if(n==null)return null;return Math.round(n)+' ms'}
+function sectionBlock(title, rows){
+  const items=rows.filter(r=>!hideField(r[1]));
+  if(!items.length) return '';
+  return `<div class="tel-sec"><div class="section-title">${esc(title)}</div><div class="detail-grid">${items.map(([k,v])=>`<div><div class="k">${esc(k)}</div><div class="v">${v}</div></div>`).join('')}</div></div>`;
+}
 function sessionDetailHtml(a, detail){
   if(!a) return '<p style="color:var(--dim);margin:0">Select a session for aggregates (no prompts or code).</p>';
-  const tok=(!a.tokens_known)?'—':(!a.cost_complete?`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">context (not billable in/out)</span>`:`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">(in ${fmtTok(a.input_tokens)} / out ${fmtTok(a.output_tokens)})</span>`);
-  const cost=a.cost_complete?(a.tokens_known?fmtUsd(a.est_spend_usd)+' <span style="color:var(--dim);font-weight:400">estimate</span>':'—'):'incomplete';
-  const dur=a.duration?esc(a.duration):'—';
-  const note=a.adapter_note?`<div class="detail-note">${esc(a.adapter_note)}</div>`:'';
-  const partial=a.cost_complete?'':'<div class="warn-tag" style="display:inline-block;margin-top:8px">cost incomplete</div>';
+  if(!detail){
+    const tok=(!a.tokens_known)?'\u2014':(!a.cost_complete?`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">context (not billable in/out)</span>`:`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">(in ${fmtTok(a.input_tokens)} / out ${fmtTok(a.output_tokens)})</span>`);
+    return `<div class="detail-grid">
+      <div><div class="k">Session id</div><div class="v" style="font-weight:500;font-size:12px;word-break:break-all">${esc(a.id)}</div></div>
+      <div><div class="k">Tool</div><div class="v">${esc(a.tool)}</div></div>
+      <div><div class="k">Model</div><div class="v">${esc(a.model)||'\u2014'}</div></div>
+      <div><div class="k">${a.cost_complete?'Tokens':'Tokens / context'}</div><div class="v">${tok}</div></div>
+    </div><p class="detail-note">Loading session detail\u2026</p>`;
+  }
+  const t=detail.telemetry||{};
+  const ctxUsed=fmtNum(t.context_tokens_used);
+  const ctxWin=fmtNum(t.context_window_tokens);
+  const ctxPct=fmtPct(t.context_pct);
+  const ctxVal=(ctxUsed!=null&&ctxWin!=null)?(`${ctxUsed} / ${ctxWin}`+(ctxPct!=null?` (${ctxPct})`:'')):(ctxUsed!=null?ctxUsed:null);
+  const ctx=sectionBlock('Context', [
+    ['Context used / window', ctxVal],
+    ['Note', t.context_note?`<span style="color:var(--dim);font-weight:400">${esc(t.context_note)}</span>`:null],
+  ]);
+  const io=sectionBlock('Billable I/O', [
+    ['Input tokens', fmtNum(t.input_tokens)],
+    ['Output tokens', fmtNum(t.output_tokens)],
+    ['Total tokens', fmtNum(t.total_tokens)],
+    ['Reasoning tokens', fmtNum(t.reasoning_tokens)],
+    ['Model calls', fmtNum(t.model_calls)],
+    ['API duration', t.api_duration_ms!=null?(fmtNum(t.api_duration_ms)+' ms'):null],
+    ['Est. spend', t.cost_usd_estimate!=null?(fmtUsd(t.cost_usd_estimate)+' <span style="color:var(--dim);font-weight:400">'+(t.cost_note?esc(t.cost_note):'estimate \u2260 invoice')+'</span>'):null],
+  ]);
+  const cache=sectionBlock('Cache', [
+    ['Cached read tokens', fmtNum(t.cached_read_tokens)],
+    ['Cache creation tokens', fmtNum(t.cache_creation_tokens)],
+  ]);
+  const toolsUsed=(t.tools_used&&t.tools_used.length)?esc(t.tools_used.join(', ')):null;
+  const sig=sectionBlock('Signals', [
+    ['Turns', fmtNum(t.turn_count)],
+    ['Tool calls', fmtNum(t.tool_call_count)],
+    ['Tools used', toolsUsed],
+    ['Avg TTFT', fmtMs(t.avg_time_to_first_token_ms)],
+    ['Avg response', fmtMs(t.avg_response_time_ms)],
+    ['Session duration', t.session_duration_seconds!=null?(fmtNum(t.session_duration_seconds)+' s'):null],
+  ]);
+  const sum=sectionBlock('Summary', [
+    ['Title', t.generated_title?esc(t.generated_title):null],
+    ['Kind', t.session_kind?esc(t.session_kind):null],
+    ['cwd', t.cwd?esc(t.cwd):null],
+    ['Model', t.model?esc(t.model):(a.model?esc(a.model):null)],
+    ['Source', esc(a.source||a.tool)],
+    ['Session id', `<span style="font-weight:500;font-size:12px;word-break:break-all">${esc(a.id)}</span>`],
+  ]);
   let promptsBlock='';
   if(PROMPTS_ENABLED){
-    const d=detail||{};
-    const p=d.prompt_text, r=d.response_text;
+    const p=detail.prompt_text, r=detail.response_text;
     if(!p && !r){
-      promptsBlock=`<div class="prompt-box"><div class="warn-tag" style="display:inline-block;margin-bottom:6px">prompts missing</div><div style="color:var(--dim);font-size:12px">Prompts on (local) — no on-disk prompt/response text for this session.</div></div>`;
+      promptsBlock=`<div class="prompt-box"><div class="warn-tag" style="display:inline-block;margin-bottom:6px">prompts missing</div><div style="color:var(--dim);font-size:12px">Prompts on (local) \u2014 no on-disk prompt/response text for this session.</div></div>`;
     } else {
       promptsBlock='<div class="prompt-box" id="promptBlocks">';
       if(p) promptsBlock+=`<h4>Prompt</h4>${truncHtml(p,false)}`;
       if(r) promptsBlock+=`<h4 style="margin-top:12px">Response</h4>${truncHtml(r,false)}`;
-      promptsBlock+='<div class="detail-note" style="margin-top:10px">Local only — never uploaded — Share Off</div></div>';
+      promptsBlock+='<div class="detail-note" style="margin-top:10px">Local only \u2014 never uploaded \u2014 Share Off</div></div>';
     }
   } else {
-    promptsBlock='<p class="detail-note">aggregates only — no raw prompts or code — local-first</p>';
+    promptsBlock='<p class="detail-note">aggregates only \u2014 no raw prompts or code \u2014 local-first \u00b7 estimates \u2260 invoice \u00b7 Share Off</p>';
   }
-  return `<div class="detail-grid">
-    <div><div class="k">Session id</div><div class="v" style="font-weight:500;font-size:12px;word-break:break-all">${esc(a.id)}</div></div>
-    <div><div class="k">Source</div><div class="v">${esc(a.source||a.tool)}</div></div>
-    <div><div class="k">Started</div><div class="v">${esc(a.started_at||a.time_range)}</div></div>
-    <div><div class="k">Ended</div><div class="v">${esc(a.ended_at||'—')}</div></div>
-    <div><div class="k">Duration</div><div class="v">${dur}</div></div>
-    <div><div class="k">Tool</div><div class="v">${esc(a.tool)}</div></div>
-    <div><div class="k">Model</div><div class="v">${esc(a.model)||'—'}</div></div>
-    <div><div class="k">${a.cost_complete?'Tokens':'Tokens / context'}</div><div class="v">${tok}</div></div>
-    <div><div class="k">Tools proposed</div><div class="v">${a.tools_proposed!=null?a.tools_proposed:'—'}</div></div>
-    <div><div class="k">Tools accepted</div><div class="v">${a.tools_accepted!=null?a.tools_accepted:'—'}</div></div>
-    <div><div class="k">Cost complete</div><div class="v">${a.cost_complete?'yes':'no'}</div></div>
-    <div><div class="k">Est. spend</div><div class="v">${cost}</div></div>
-  </div>${partial}${note}${promptsBlock}`;
+  return `${sum}${ctx}${io}${cache}${sig}${promptsBlock}`;
+}
+let DETAIL_CACHE={};
+async function loadSessionDetail(id){
+  if(!id) return null;
+  if(DETAIL_CACHE[id]) return DETAIL_CACHE[id];
+  try{
+    const r=await fetch('/api/session/'+encodeURIComponent(id)+'?days='+DAYS);
+    if(!r.ok) return null;
+    const j=await r.json();
+    DETAIL_CACHE[id]=j;
+    return j;
+  }catch(e){return null}
+}
 }
 let SELECTED_SESSION=(new URLSearchParams(location.search).get('sid')||null);
 function renderActivity(){
   const d=DATA.today;
-  $('#title').textContent=`Activity — Last ${DAYS} days`;
-  $('#lockLine').textContent=(d.language_lock&&d.language_lock.observations_note)||'Local only — observations, not a score';
+  $('#title').textContent=`Activity \u2014 Last ${DAYS} days`;
+  $('#lockLine').textContent=(d.language_lock&&d.language_lock.observations_note)||'Local only \u2014 observations, not a score';
   $('#status').innerHTML=statusHtml(d.adapter_status);
   syncFixtureBanner();
   syncPromptsChrome();
@@ -406,12 +456,13 @@ function renderActivity(){
   const rows=list.map(a=>{
     const sel=a.id===SELECTED_SESSION?' sel':'';
     return `<tr class="${sel.trim()}" data-sid="${esc(a.id)}">
-      <td>${esc(a.time_range)}</td><td>${esc(a.tool)}</td><td>${esc(a.model)||'—'}</td>
+      <td>${esc(a.time_range)}</td><td>${esc(a.tool)}</td><td>${esc(a.model)||'\u2014'}</td>
       <td>${fmtTokKnown(a.tokens,a.tokens_known)}</td>
-      <td>${a.duration?esc(a.duration):'—'}</td>
+      <td>${a.duration?esc(a.duration):'\u2014'}</td>
       <td>${a.cost_complete?'':'!'}</td></tr>`;
   }).join('');
   const selected=list.find(a=>a.id===SELECTED_SESSION);
+  const sid=SELECTED_SESSION;
   $('#content').innerHTML=`
     <div class="act-layout">
       <div class="card">
@@ -421,7 +472,7 @@ function renderActivity(){
       </div>
       <div class="card" id="actDetailCard">
         <div class="section-title" style="margin-top:0">Session detail</div>
-        ${sessionDetailHtml(selected, SESSION_DETAIL && SESSION_DETAIL.id===SELECTED_SESSION ? SESSION_DETAIL : null)}
+        <div id="sessionDetailPane">${sessionDetailHtml(selected, DETAIL_CACHE[sid]||null)}</div>
       </div>
     </div>`;
   const table=$('#actTable');
@@ -437,29 +488,24 @@ function renderActivity(){
     const pre=b.previousElementSibling;
     if(!pre) return;
     const expand=b.getAttribute('data-expand')==='1';
-    // re-fetch full text from SESSION_DETAIL
     const which = pre.previousElementSibling && /response/i.test(pre.previousElementSibling.textContent||'') ? 'response' : 'prompt';
-    const full = which==='response' ? (SESSION_DETAIL&&SESSION_DETAIL.response_text) : (SESSION_DETAIL&&SESSION_DETAIL.prompt_text);
+    const d = DETAIL_CACHE[SELECTED_SESSION] || SESSION_DETAIL;
+    const full = which==='response' ? (d&&d.response_text) : (d&&d.prompt_text);
     if(full==null) return;
     const wrap=document.createElement('div');
     wrap.innerHTML=truncHtml(full, expand);
     pre.replaceWith(wrap.firstChild);
     b.replaceWith(wrap.querySelector('button.expand')||document.createTextNode(''));
   });
-  if(PROMPTS_ENABLED && SELECTED_SESSION){
-    fetch('/api/session/'+encodeURIComponent(SELECTED_SESSION)+'?days='+DAYS)
-      .then(r=>r.ok?r.json():null)
-      .then(j=>{
-        if(!j || j.id!==SELECTED_SESSION) return;
-        SESSION_DETAIL=j;
-        const card=$('#actDetailCard');
-        if(card){
-          card.innerHTML=`<div class="section-title" style="margin-top:0">Session detail</div>${sessionDetailHtml(selected, j)}`;
-        }
-      }).catch(()=>{});
+  if(sid){
+    loadSessionDetail(sid).then(j=>{
+      if(SELECTED_SESSION!==sid) return;
+      SESSION_DETAIL=j;
+      const pane=$('#sessionDetailPane');
+      if(pane) pane.innerHTML=sessionDetailHtml(selected, j);
+    });
   }
 }
-
 function renderStub(name){
   $('#title').textContent=name+' — stub';
   $('#lockLine').textContent='Local only — observations, not a score';

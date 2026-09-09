@@ -1,8 +1,8 @@
 ﻿//! Localhost HTTP server with embedded HTML.
-use crate::adapters::{load_session_texts, SessionTexts};
+use crate::adapters::{load_session_texts, load_session_telemetry, SessionTexts};
 use crate::insights::build_insights;
-use crate::models::{ActivityRow, AdapterStatus, SessionDetail};
-use crate::rollups::{rollup, ShippingContext};
+use crate::models::{AdapterStatus, LanguageLock, SessionDetail, SessionTelemetry};
+use crate::rollups::{activity_row_for, rollup, ShippingContext};
 use crate::settings;
 use crate::SessionStore;
 use anyhow::Result;
@@ -156,77 +156,44 @@ pub fn serve(addr: &str, store: Arc<Mutex<SessionStore>>) -> Result<()> {
 fn build_session_detail(
     st: &SessionStore,
     id: &str,
-    days: u32,
+    _days: u32,
     prompts_on: bool,
 ) -> Option<SessionDetail> {
-    let statuses = st.statuses.clone();
-    let today = rollup(
-        &st.sessions,
-        days,
-        statuses,
-        st.used_fixtures,
-        ShippingContext {
-            configured: st.github_configured,
-            events: &st.shipping_events,
-            auth_source: st.github_auth_source.as_deref(),
-            login: st.github_login.as_deref(),
-        },
-    );
-    let row: Option<&ActivityRow> = today.activity.iter().find(|a| a.id == id);
-    let row = match row {
-        Some(r) => r.clone(),
-        None => {
-            // Fall back to raw session if outside rolled activity window presentation
-            let s = st.sessions.iter().find(|s| s.id == id)?;
-            ActivityRow {
-                id: s.id.clone(),
-                time_range: String::new(),
-                started_at: s.started_at.to_rfc3339(),
-                ended_at: s.ended_at.to_rfc3339(),
-                duration: String::new(),
-                tool: s.tool.clone(),
-                model: s.model.clone(),
-                tokens: s.total_tokens(),
-                input_tokens: s.input_tokens,
-                output_tokens: s.output_tokens,
-                tokens_known: s.tokens_known,
-                tools_proposed: s.tools_proposed,
-                tools_accepted: s.tools_accepted,
-                cost_complete: s.cost_complete,
-                source: s.source.clone(),
-                adapter_note: String::new(),
-                est_spend_usd: 0.0,
-            }
-        }
-    };
+    let session = st.sessions.iter().find(|s| s.id == id)?;
+    let activity = activity_row_for(session, &st.statuses);
+    let mut telemetry = load_session_telemetry(id).unwrap_or_else(|_| SessionTelemetry {
+        id: id.to_string(),
+        tool: session.tool.clone(),
+        ..Default::default()
+    });
+
+    // Claude/Cursor: map billable I/O from SessionRecord when disk usage absent.
+    if telemetry.input_tokens.is_none() && session.tokens_known && session.cost_complete {
+        telemetry.input_tokens = Some(session.input_tokens);
+        telemetry.output_tokens = Some(session.output_tokens);
+        telemetry.total_tokens = Some(session.input_tokens + session.output_tokens);
+    }
+    if telemetry.model.is_none() && !session.model.is_empty() {
+        telemetry.model = Some(session.model.clone());
+    }
+    if telemetry.tool.is_empty() {
+        telemetry.tool = session.tool.clone();
+    }
 
     let mut prompt_text = None;
     let mut response_text = None;
     let mut prompts_missing = false;
     if prompts_on {
-        let texts: SessionTexts = load_session_texts(&row.id).unwrap_or_default();
+        let texts: SessionTexts = load_session_texts(&activity.id).unwrap_or_default();
         prompt_text = texts.prompt_text;
         response_text = texts.response_text;
         prompts_missing = prompt_text.is_none() && response_text.is_none();
     }
 
     Some(SessionDetail {
-        id: row.id,
-        tool: row.tool,
-        model: row.model,
-        started_at: row.started_at,
-        ended_at: row.ended_at,
-        duration: row.duration,
-        input_tokens: row.input_tokens,
-        output_tokens: row.output_tokens,
-        tokens: row.tokens,
-        tokens_known: row.tokens_known,
-        tools_proposed: row.tools_proposed,
-        tools_accepted: row.tools_accepted,
-        cost_complete: row.cost_complete,
-        source: row.source,
-        adapter_note: row.adapter_note,
-        est_spend_usd: row.est_spend_usd,
+        activity,
+        telemetry,
+        language_lock: LanguageLock::default(),
         prompts_enabled: prompts_on,
         prompt_text,
         response_text,
