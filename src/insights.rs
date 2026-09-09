@@ -1,4 +1,5 @@
 //! Deterministic insights - observations with evidence, never grades.
+use crate::adapters::load_session_telemetry;
 use crate::models::{Finding, InsightsPayload, LanguageLock, SessionRecord};
 use crate::rollups::{estimate_spend_usd, rollup, ShippingContext};
 use chrono::{Duration, Utc};
@@ -35,6 +36,7 @@ pub fn build_insights(
         },
     );
     let mut findings = Vec::new();
+    let since = Utc::now() - Duration::days(period_days as i64);
 
     // 1) Tool share shift — only when share materially INCREASED (not flat / down).
     if let Some(top) = context.by_tool.first() {
@@ -66,12 +68,12 @@ pub fn build_insights(
         if pct >= 80.0 {
             let accepted: i64 = sessions
                 .iter()
-                .filter(|s| s.started_at >= Utc::now() - Duration::days(period_days as i64))
+                .filter(|s| s.started_at >= since)
                 .map(|s| s.tools_accepted)
                 .sum();
             let proposed: i64 = sessions
                 .iter()
-                .filter(|s| s.started_at >= Utc::now() - Duration::days(period_days as i64))
+                .filter(|s| s.started_at >= since)
                 .map(|s| s.tools_proposed)
                 .sum();
             findings.push(Finding {
@@ -82,9 +84,21 @@ pub fn build_insights(
         }
     }
 
-    // 3) Incomplete cost signals (e.g. Grok context tokens only)
+    // 3) Incomplete cost / missing I/O — suppress when turn usage exists on disk (ARG-38).
+    // Grok scan rows may still mark cost_complete=false (context tokens in rollups), but
+    // updates.jsonl turn_completed.usage can provide billable I/O on session detail.
+    let grok_has_turn_io = period_has_grok_turn_io(sessions, since);
     for t in &context.by_tool {
-        if t.cost_incomplete || t.tool == "Grok" {
+        let is_grok = t.tool == "Grok";
+        if !t.cost_incomplete && !is_grok {
+            continue;
+        }
+        if is_grok && grok_has_turn_io {
+            // Align with detail: I/O exists; don't claim "no I/O".
+            // Optional soft note distinguishing context rollups vs detail I/O — skip noisy finding.
+            continue;
+        }
+        if t.cost_incomplete || (is_grok && !grok_has_turn_io) {
             findings.push(Finding {
                 title: format!("{} cost incomplete", t.tool),
                 summary: "signals lack billable I/O \u{2014} treat $ as unknown".into(),
@@ -101,11 +115,11 @@ pub fn build_insights(
         }
     }
     if !findings.iter().any(|f| f.title.contains("cost incomplete")) {
-        if context
+        let grok_partial = context
             .adapter_status
             .iter()
-            .any(|a| a.partial && a.name.contains("Grok"))
-        {
+            .any(|a| a.partial && a.name.contains("Grok"));
+        if grok_partial && !grok_has_turn_io {
             findings.push(Finding {
                 title: "Grok cost incomplete".into(),
                 summary: "signals lack billable I/O \u{2014} treat $ as unknown".into(),
@@ -138,7 +152,6 @@ pub fn build_insights(
     }
 
     // 5) Long sessions / model dominance
-    let since = Utc::now() - Duration::days(period_days as i64);
     let long: Vec<&SessionRecord> = sessions
         .iter()
         .filter(|s| s.started_at >= since)
@@ -184,6 +197,19 @@ pub fn build_insights(
         context,
         language_lock: LanguageLock::default(),
     }
+}
+
+/// True when any Grok session in the period has turn_completed usage I/O on disk.
+fn period_has_grok_turn_io(sessions: &[SessionRecord], since: chrono::DateTime<Utc>) -> bool {
+    sessions
+        .iter()
+        .filter(|s| s.source == "grok" && s.started_at >= since)
+        .any(|s| match load_session_telemetry(&s.id) {
+            Ok(tel) => {
+                tel.input_tokens.unwrap_or(0) > 0 || tel.output_tokens.unwrap_or(0) > 0
+            }
+            Err(_) => false,
+        })
 }
 
 fn short_model(m: &str) -> String {
