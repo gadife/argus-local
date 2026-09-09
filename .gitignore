@@ -19,3 +19,8 @@ proof/debug.png
 proof/arg-33/*.exe
 proof/arg-33/*.zip
 proof/**/argus-local.exe
+
+# ARG-34 macOS release binaries
+proof/arg-34/*.zip
+proof/arg-34/argus-local
+proof/arg-34/stage-macos/

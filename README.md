@@ -10,11 +10,12 @@ One-process **local-first** dashboard for engineers. A single Rust binary (`argu
 > - Footer: `aggregates only - no raw prompts or code - local-first`
 > - Share to org defaults **Off** (UI only in v1)
 
-## Download (Windows x64) — primary
+## Download — primary (no Rust required)
 
-No Rust toolchain required. Grab the portable zip from the latest GitHub Release:
+Grab a portable zip from the latest GitHub Release: https://github.com/gadife/argus-local/releases/latest
 
-- **Release:** https://github.com/gadife/argus-local/releases/latest
+### Windows x64
+
 - Artifact: `argus-local-windows-x64.zip` (+ `argus-local-windows-x64.zip.sha256`)
 
 ```powershell
@@ -34,7 +35,29 @@ cd .\argus-local
 
 Portable zip contents: `argus-local.exe` + checksum file. No installer for v1.
 
-> Until the first Release is published, local packaging artifacts live under `proof/arg-33/` / `dist/` after `scripts/package-windows-release.ps1` (see [docs/RELEASE.md](docs/RELEASE.md)).
+### macOS (Apple Silicon / arm64)
+
+- Artifact: `argus-local-macos-arm64.zip` (+ `argus-local-macos-arm64.zip.sha256`) when published on the Release
+- Arch: `aarch64-apple-darwin` (built on `macos-14` CI). Intel macs are not the v1 primary target.
+- **Gatekeeper:** this build is **not notarized**. First launch may be blocked — right-click → Open, or clear quarantine: `xattr -d com.apple.quarantine ./argus-local`
+
+```bash
+# 1) Download zip + .sha256 from the Release
+# 2) Verify
+shasum -a 256 -c argus-local-macos-arm64.zip.sha256
+# 3) Unzip and run
+unzip argus-local-macos-arm64.zip -d argus-local
+cd argus-local
+chmod +x ./argus-local
+./argus-local --help
+./argus-local open
+./argus-local tui --fixtures
+```
+
+Zip contents: `argus-local` binary, checksum, and a short `README-macOS.txt` (Gatekeeper note). No installer / notarization for v1.
+
+> Packaging: Windows via `scripts/package-windows-release.ps1`; macOS via `scripts/package-macos-release.sh` or GitHub Actions workflow `macOS release package` (see [docs/RELEASE.md](docs/RELEASE.md)). **Do not attach the macOS asset to the Release until Review + PM then Gadi clear (ARG-34).**
+
 
 ## Optional: build from source
 
@@ -127,9 +150,9 @@ Same data path as HTML (adapters → SQLite → rollups/insights). Renders whole
 
 ## Out of scope (this ticket / v1)
 
-Linear adapter, Jira, org Share bridge, inventing shipping when GitHub isn't configured, real Codex adapter, native GUI, Node sidecar, Docker. macOS/Linux release zips, code signing, auto-update, and MSI installer are also out of scope for ARG-33.
+Linear adapter, Jira, org Share bridge, inventing shipping when GitHub isn't configured, real Codex adapter, native GUI, Node sidecar, Docker. Linux release zips, code signing/notarization, auto-update, and MSI installer remain out of scope. macOS arm64 zip is ARG-34 (hold Release attach for Review+PM then Gadi).
 
-## Publishing a Windows Release
+## Publishing a Release
 
 See [docs/RELEASE.md](docs/RELEASE.md) and `scripts/package-windows-release.ps1`. Packaging is local; `gh release create` is a separate, approved step.
 
