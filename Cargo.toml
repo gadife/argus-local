@@ -2,7 +2,7 @@
 name = "argus-local"
 version = "0.1.0"
 edition = "2021"
-description = "Argus Local — one-process local HTML dashboard for Claude Code + Cursor session aggregates"
+description = "Argus Local - one-process local HTML dashboard for Claude Code + Cursor session aggregates"
 license = "MIT"
 authors = ["Gadi Feldman"]
 
@@ -23,3 +23,5 @@ tiny_http = "0.12"
 open = "5"
 uuid = { version = "1", features = ["v4"] }
 dirs = "5"
+ratatui = "0.29"
+crossterm = "0.28"

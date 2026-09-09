@@ -1,4 +1,4 @@
-//! argus-local - one-process local HTML MVP (Claude Code + Cursor + Grok).
+//! argus-local - one-process local HTML + TUI MVP (Claude Code + Cursor + Grok).
 mod adapters;
 mod db;
 mod fixtures;
@@ -6,6 +6,7 @@ mod insights;
 mod models;
 mod rollups;
 mod server;
+mod tui;
 
 use adapters::scan_all;
 use anyhow::{Context, Result};
@@ -16,7 +17,7 @@ use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 #[derive(Parser, Debug)]
-#[command(name = "argus-local", about = "Local-first AI session aggregates (estimates ≠ invoice)")]
+#[command(name = "argus-local", about = "Local-first AI session aggregates (estimates != invoice)")]
 struct Cli {
     #[command(subcommand)]
     cmd: Commands,
@@ -41,6 +42,18 @@ enum Commands {
         /// Do not open a browser tab
         #[arg(long)]
         no_open: bool,
+    },
+    /// Full-screen terminal UI (Today / Insights + stubs) — same engine as HTML
+    Tui {
+        /// Force fixture demo data even if adapters find sessions
+        #[arg(long)]
+        fixtures: bool,
+        /// Period days (1 / 7 / 30; press d in TUI to cycle)
+        #[arg(long, default_value_t = 7)]
+        days: u32,
+        /// Write Today + Insights screen dumps to DIR (non-interactive proof) then exit
+        #[arg(long, value_name = "DIR")]
+        proof: Option<PathBuf>,
     },
     /// Scan only and print adapter status
     Scan {
@@ -126,9 +139,9 @@ fn main() -> Result<()> {
                     "insights": insights,
                     "used_fixtures": store.used_fixtures,
                     "language_lock": {
-                        "estimates": "estimates ≠ invoice",
+                        "estimates": "estimates != invoice",
                         "observations": "observations, not a score",
-                        "footer": "aggregates only · no raw prompts or code · local-first"
+                        "footer": "aggregates only — no raw prompts or code — local-first"
                     }
                 });
                 println!("{}", serde_json::to_string_pretty(&out)?);
@@ -145,6 +158,21 @@ fn main() -> Result<()> {
                 });
             }
             server::serve(&bind, shared)?;
+        }
+        Commands::Tui {
+            fixtures,
+            days,
+            proof,
+        } => {
+            let store = load_store(fixtures)?;
+            if let Some(dir) = proof {
+                let paths = tui::write_proof_screens(store, days, &dir)?;
+                for p in paths {
+                    eprintln!("argus-local: wrote {}", p.display());
+                }
+                return Ok(());
+            }
+            tui::run(store, days)?;
         }
         Commands::Scan { json } => {
             let store = load_store(false)?;
@@ -171,4 +199,3 @@ fn main() -> Result<()> {
     }
     Ok(())
 }
-

@@ -1,0 +1,36 @@
+┌ Argus Local ─────────────────────────────────────────────────────────────────────────────────────┐
+│  Today  |  Activity  |  Tools  |  Insights  |  Shipping  |  Share  |  Settings                   │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+Insights — Last 7 days   Local only — observations, not a score   period=7d (press d)               
+ Demo fixtures — not live adapter data. Label shown so this is never silent fake-as-real.           
+                                                                                                    
+adapters: * Claude Code  * Cursor  * Codex  * Grok   Share to org: Off                              
+                                                                                                    
+┌ Findings (observations, not a score) ──────────────────────┐┌ Context ───────────────────────────┐
+│> Tool accept stayed high                                   ││Sessions     47                     │
+│86% accept — 47 sessions                                    ││Tokens       17.1M                  │
+│why this showed: 296/343 proposed tools accepted            ││Est. spend   $128 estimate          │
+│                                                            ││Tool accept  86%                    │
+│> Grok cost incomplete                                      ││                                    │
+│signals lack billable I/O — treat $ as unknown              ││By tool                             │
+│why this showed: 600.0K tokens, no I/O data                 ││Claude Code########-------- 8.9M    │
+│                                                            ││Cursor   #####----------- 5.2M      │
+│> Shipping is a stub placeholder                            ││Codex    ##-------------- 2.4M      │
+│Opt-in GitHub shipping is not connected — no observed       ││Grok     #--------------- 600.0K    │
+│PR/commit counts                                            ││                                    │
+│why this showed: shipping adapter is stub/opt-in only       ││Not ranked vs peers — not a         │
+│                                                            ││productivity score                  │
+│> Sonnet dominated long sessions                            ││                                    │
+│3 sessions >1h used Claude Sonnet 4                         ││                                    │
+│why this showed: 3 sessions over 60 mins                    ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+└────────────────────────────────────────────────────────────┘└────────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  |   Tab/h/l navigate · 1-7 pages · d period 

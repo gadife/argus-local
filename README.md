@@ -1,13 +1,13 @@
-﻿# Argus Local
+# Argus Local
 
-One-process **local-first** dashboard for engineers. A single Rust binary (`argus-local`) reads local Claude Code / Cursor session data (Codex/Grok stubs in v1), indexes into SQLite, rolls up metrics + deterministic insights, and serves an embedded HTML UI on `127.0.0.1`.
+One-process **local-first** dashboard for engineers. A single Rust binary (`argus-local`) reads local Claude Code / Cursor session data (Codex/Grok stubs in v1), indexes into SQLite, rolls up metrics + deterministic insights, and serves an embedded HTML UI on `127.0.0.1` — or a full-screen terminal UI via `argus-local tui`.
 
 > **Language lock**
 > - `estimates ≠ invoice`
 > - `observations, not a score`
 > - No Elite/Low labels, peer ranks, productivity scores, or causal ROI
-> - Shipping (when shown): `correlation with sessions · not a productivity score.`
-> - Footer: `aggregates only · no raw prompts or code · local-first`
+> - Shipping (when shown): `correlation with sessions — not a productivity score.`
+> - Footer: `aggregates only — no raw prompts or code — local-first`
 > - Share to org defaults **Off** (UI only in v1)
 
 ## Requirements
@@ -38,6 +38,15 @@ argus-local open --json
 # Force fixture demo data
 argus-local open --fixtures
 
+# Full-screen terminal UI (Today / Insights + nav stubs) — same engine as HTML
+argus-local tui
+argus-local tui --fixtures
+argus-local tui --days 7
+# Keys: Tab/h/l navigate · 1–7 pages · d cycle period · q quit
+
+# Non-interactive TUI screen dumps (proof)
+argus-local tui --fixtures --proof proof/
+
 # Scan status
 argus-local scan
 argus-local scan --json
@@ -61,8 +70,12 @@ If no Claude/Cursor sessions are found, **fixture demo data** loads automaticall
 ## UI
 
 - **Today** — KPI strip, By tool, Activity, Shipping opt-in stub
-- **Insights** — 3–5 deterministic findings with evidence + Context panel
+- **Insights** — 3-5 deterministic findings with evidence + Context panel
 - Stub nav: Activity / Tools / Shipping / Share / Settings
+
+### Terminal UI (`argus-local tui`)
+
+Same data path as HTML (adapters → SQLite → rollups/insights). Renders whole screens in the terminal with keyboard nav — not a JSON dump. Built with **ratatui + crossterm**.
 
 ## Out of scope (v1)
 
@@ -76,3 +89,4 @@ MIT
 
 See `proof/today.png` and `proof/insights.png` from `argus-local open --fixtures` on gili-pc.
 
+TUI proofs: `proof/tui-today.txt` / `proof/tui-today.png` and `proof/tui-insights.txt` / `proof/tui-insights.png` from `argus-local tui --fixtures --proof proof/`.

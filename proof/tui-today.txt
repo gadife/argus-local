@@ -1,0 +1,36 @@
+┌ Argus Local ─────────────────────────────────────────────────────────────────────────────────────┐
+│  Today  |  Activity  |  Tools  |  Insights  |  Shipping  |  Share  |  Settings                   │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+Today — Last 7 days   Local only — estimates ≠ invoice   period=7d (press d)                        
+ Demo fixtures — not live adapter data. Label shown so this is never silent fake-as-real.           
+                                                                                                    
+adapters: * Claude Code  * Cursor  * Codex  * Grok   Share to org: Off                              
+                                                                                                    
+┌──────────────────┐┌──────────────────┐┌──────────────────┐┌──────────────────┐┌──────────────────┐
+│Sessions          ││Tokens            ││$ Est. spend      ││Tool accept       ││Models            │
+│47                ││17.1M             ││$128              ││86%               ││6                 │
+│Completed         ││Total estimated   ││estimate          ││Accepted / propose││Unique models     │
+└──────────────────┘└──────────────────┘└──────────────────┘└──────────────────┘└──────────────────┘
+┌ By tool ─────────────────────────────────────────────────────────────────────────────────────────┐
+│By tool (found on device only)                                                                    │
+│  Claude Code  8.9M tok   23 sess  ##########----------                                           │
+│  Cursor      5.2M tok   14 sess  ######--------------                                            │
+│  Codex       2.4M tok    8 sess  ###-----------------                                            │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌ Activity ─────────────────────────────────────────────────────┐┌ Shipping (opt-in GitHub) stub  ─┐
+│Time        Tool       Model            Tokens         Est.    ││Merged PRs          —            │
+│21:28 - 22: Cursor     GPT-4.1          250.0K tokens  $1      ││Commits            —             │
+│20:28 - 21: Claude Cod Claude Opus 4.6  220.0K tokens  $6      ││Files touched      —             │
+│18:28 - 19: Codex      Codex Medium     300.0K tokens  $1      ││                                 │
+│15:28 - 16: Claude Cod Claude Sonnet 4  235.0K tokens  $1      ││Stub / opt-in GitHub placeholder │
+│14:28 - 14: Grok       Grok             300.0K tokens  $0      ││— not observed shipping data.    │
+│14:28 - 15: Cursor     claude-4-sonnet  269.0K tokens  $1      ││                                 │
+│10:28 - 11: Claude Cod Claude Sonnet 4  250.0K tokens  $1      ││                                 │
+│09:28 - 10: Codex      Codex Medium     300.0K tokens  $1      ││                                 │
+│07:28 - 08: Cursor     claude-4-sonnet  288.0K tokens  $2      ││                                 │
+│05:28 - 06: Claude Cod Claude Sonnet 4  265.0K tokens  $1      ││                                 │
+│02:28 - 02: Grok       Grok             300.0K tokens  $0      ││                                 │
+│00:28 - 01: Codex      Codex Medium     300.0K tokens  $1      ││                                 │
+└───────────────────────────────────────────────────────────────┘└─────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  |   Tab/h/l navigate · 1-7 pages · d period 
