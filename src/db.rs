@@ -1,5 +1,5 @@
-//! SQLite index for session records.
-use crate::models::SessionRecord;
+//! SQLite index for session records + shipping events.
+use crate::models::{SessionRecord, ShippingEvent};
 use anyhow::{Context, Result};
 use rusqlite::{params, Connection};
 use std::path::Path;
@@ -31,6 +31,7 @@ impl Index {
         self.conn.execute_batch(
             r#"
             DROP TABLE IF EXISTS sessions;
+            DROP TABLE IF EXISTS shipping_events;
             CREATE TABLE sessions (
                 id TEXT PRIMARY KEY,
                 tool TEXT NOT NULL,
@@ -47,6 +48,16 @@ impl Index {
             );
             CREATE INDEX IF NOT EXISTS idx_sessions_started ON sessions(started_at);
             CREATE INDEX IF NOT EXISTS idx_sessions_tool ON sessions(tool);
+            CREATE TABLE shipping_events (
+                id TEXT PRIMARY KEY,
+                kind TEXT NOT NULL,
+                occurred_at TEXT NOT NULL,
+                files_touched INTEGER NOT NULL,
+                repo TEXT NOT NULL,
+                title TEXT NOT NULL
+            );
+            CREATE INDEX IF NOT EXISTS idx_shipping_occurred ON shipping_events(occurred_at);
+            CREATE INDEX IF NOT EXISTS idx_shipping_kind ON shipping_events(kind);
             "#,
         )?;
         Ok(())
@@ -54,6 +65,7 @@ impl Index {
 
     pub fn clear(&self) -> Result<()> {
         self.conn.execute("DELETE FROM sessions", [])?;
+        self.conn.execute("DELETE FROM shipping_events", [])?;
         Ok(())
     }
 
@@ -103,6 +115,37 @@ impl Index {
         Ok(rows.len())
     }
 
+    pub fn upsert_shipping(&self, rows: &[ShippingEvent]) -> Result<usize> {
+        let tx = self.conn.unchecked_transaction()?;
+        {
+            let mut stmt = tx.prepare(
+                r#"
+                INSERT INTO shipping_events (
+                    id, kind, occurred_at, files_touched, repo, title
+                ) VALUES (?1,?2,?3,?4,?5,?6)
+                ON CONFLICT(id) DO UPDATE SET
+                    kind=excluded.kind,
+                    occurred_at=excluded.occurred_at,
+                    files_touched=excluded.files_touched,
+                    repo=excluded.repo,
+                    title=excluded.title
+                "#,
+            )?;
+            for r in rows {
+                stmt.execute(params![
+                    r.id,
+                    r.kind,
+                    r.occurred_at.to_rfc3339(),
+                    r.files_touched,
+                    r.repo,
+                    r.title,
+                ])?;
+            }
+        }
+        tx.commit()?;
+        Ok(rows.len())
+    }
+
     pub fn sessions_since(&self, since: &str) -> Result<Vec<SessionRecord>> {
         let mut stmt = self.conn.prepare(
             r#"
@@ -144,10 +187,45 @@ impl Index {
         Ok(out)
     }
 
+    pub fn shipping_events(&self) -> Result<Vec<ShippingEvent>> {
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT id, kind, occurred_at, files_touched, repo, title
+            FROM shipping_events
+            ORDER BY occurred_at DESC
+            "#,
+        )?;
+        let iter = stmt.query_map([], |row| {
+            let occurred: String = row.get(2)?;
+            Ok(ShippingEvent {
+                id: row.get(0)?,
+                kind: row.get(1)?,
+                occurred_at: chrono::DateTime::parse_from_rfc3339(&occurred)
+                    .map(|d| d.with_timezone(&chrono::Utc))
+                    .unwrap_or_else(|_| chrono::Utc::now()),
+                files_touched: row.get(3)?,
+                repo: row.get(4)?,
+                title: row.get(5)?,
+            })
+        })?;
+        let mut out = Vec::new();
+        for r in iter {
+            out.push(r?);
+        }
+        Ok(out)
+    }
+
     pub fn count(&self) -> Result<i64> {
         let n: i64 = self
             .conn
             .query_row("SELECT COUNT(*) FROM sessions", [], |r| r.get(0))?;
+        Ok(n)
+    }
+
+    pub fn shipping_count(&self) -> Result<i64> {
+        let n: i64 = self
+            .conn
+            .query_row("SELECT COUNT(*) FROM shipping_events", [], |r| r.get(0))?;
         Ok(n)
     }
 }

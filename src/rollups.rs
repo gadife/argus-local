@@ -1,6 +1,8 @@
 //! Period rollups + rough estimate pricing (NOT an invoice).
+use crate::adapters::snapshot_for_period;
 use crate::models::{
-    ActivityRow, AdapterStatus, LanguageLock, PeriodRollup, SessionRecord, ShippingStub, ToolRollup,
+    ActivityRow, AdapterStatus, LanguageLock, PeriodRollup, SessionRecord, ShippingEvent,
+    ShippingStub, ToolRollup,
 };
 use chrono::{Duration, Utc};
 use std::collections::{HashMap, HashSet};
@@ -26,11 +28,19 @@ pub fn estimate_spend_usd(model: &str, input: i64, output: i64) -> f64 {
     (input as f64 / 1_000_000.0) * in_per_m + (output as f64 / 1_000_000.0) * out_per_m
 }
 
+pub struct ShippingContext<'a> {
+    pub configured: bool,
+    pub events: &'a [ShippingEvent],
+    pub auth_source: Option<&'a str>,
+    pub login: Option<&'a str>,
+}
+
 pub fn rollup(
     sessions: &[SessionRecord],
     period_days: u32,
     adapter_status: Vec<AdapterStatus>,
     used_fixtures: bool,
+    shipping: ShippingContext<'_>,
 ) -> PeriodRollup {
     let since = Utc::now() - Duration::days(period_days as i64);
     let filtered: Vec<&SessionRecord> = sessions
@@ -121,6 +131,14 @@ pub fn rollup(
         })
         .collect();
 
+    let shipping_snap = snapshot_for_period(
+        shipping.configured,
+        shipping.events,
+        period_days,
+        shipping.auth_source,
+        shipping.login,
+    );
+
     PeriodRollup {
         period_days,
         sessions: sessions_n,
@@ -131,13 +149,7 @@ pub fn rollup(
         models_unique: models.len() as i64,
         by_tool,
         activity,
-        shipping: ShippingStub {
-            is_stub: true,
-            merged_prs: None,
-            commits: None,
-            files_touched: None,
-            note: LanguageLock::default().shipping_note,
-        },
+        shipping: shipping_snap,
         adapter_status,
         language_lock: LanguageLock::default(),
         used_fixtures,
@@ -152,4 +164,10 @@ pub fn format_tokens(n: i64) -> String {
     } else {
         n.to_string()
     }
+}
+
+/// Unconfigured shipping placeholder (tests / fixtures without GitHub).
+#[allow(dead_code)]
+pub fn absent_shipping() -> ShippingStub {
+    snapshot_for_period(false, &[], 7, None, None)
 }

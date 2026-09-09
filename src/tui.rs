@@ -1,7 +1,7 @@
 //! Terminal UI — full screens via ratatui (same engine as HTML).
 use crate::insights::build_insights;
 use crate::models::{InsightsPayload, LanguageLock, PeriodRollup, SessionRecord};
-use crate::rollups::{format_tokens, rollup};
+use crate::rollups::{ShippingContext, format_tokens, rollup};
 use crate::SessionStore;
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
@@ -66,6 +66,10 @@ struct App {
     used_fixtures: bool,
     sessions: Vec<SessionRecord>,
     statuses: Vec<crate::models::AdapterStatus>,
+    shipping_events: Vec<crate::models::ShippingEvent>,
+    github_configured: bool,
+    github_auth_source: Option<String>,
+    github_login: Option<String>,
     should_quit: bool,
 }
 
@@ -77,12 +81,24 @@ impl App {
             days,
             store.statuses.clone(),
             store.used_fixtures,
+            ShippingContext {
+                configured: store.github_configured,
+                events: &store.shipping_events,
+                auth_source: store.github_auth_source.as_deref(),
+                login: store.github_login.as_deref(),
+            },
         );
         let insights = build_insights(
             &store.sessions,
             days,
             store.statuses.clone(),
             store.used_fixtures,
+            ShippingContext {
+                configured: store.github_configured,
+                events: &store.shipping_events,
+                auth_source: store.github_auth_source.as_deref(),
+                login: store.github_login.as_deref(),
+            },
         );
         Self {
             page: Page::Today,
@@ -92,6 +108,10 @@ impl App {
             used_fixtures: store.used_fixtures,
             sessions: store.sessions,
             statuses: store.statuses,
+            shipping_events: store.shipping_events,
+            github_configured: store.github_configured,
+            github_auth_source: store.github_auth_source,
+            github_login: store.github_login,
             should_quit: false,
         }
     }
@@ -102,12 +122,24 @@ impl App {
             self.days,
             self.statuses.clone(),
             self.used_fixtures,
+            ShippingContext {
+                configured: self.github_configured,
+                events: &self.shipping_events,
+                auth_source: self.github_auth_source.as_deref(),
+                login: self.github_login.as_deref(),
+            },
         );
         self.insights = build_insights(
             &self.sessions,
             self.days,
             self.statuses.clone(),
             self.used_fixtures,
+            ShippingContext {
+                configured: self.github_configured,
+                events: &self.shipping_events,
+                auth_source: self.github_auth_source.as_deref(),
+                login: self.github_login.as_deref(),
+            },
         );
     }
 
@@ -277,7 +309,7 @@ pub fn write_proof_screens(store: SessionStore, days: u32, dir: &Path) -> Result
     let height = 40u16;
     let mut out_paths = Vec::new();
 
-    for (page, name) in [(Page::Today, "tui-today"), (Page::Insights, "tui-insights")] {
+    for (page, name) in [(Page::Today, "tui-today"), (Page::Insights, "tui-insights"), (Page::Shipping, "tui-shipping")] {
         app.page = page;
         let backend = ratatui::backend::TestBackend::new(width, height);
         let mut terminal = Terminal::new(backend)?;
@@ -331,6 +363,8 @@ fn draw(f: &mut Frame, app: &App) {
     match app.page {
         Page::Today => draw_today(f, chunks[4], app),
         Page::Insights => draw_insights(f, chunks[4], app),
+        Page::Shipping => draw_shipping(f, chunks[4], app),
+        Page::Settings => draw_settings(f, chunks[4], app),
         other => draw_stub(f, chunks[4], other),
     }
     draw_footer(f, chunks[5], app);
@@ -371,6 +405,8 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
     let lock = match app.page {
         Page::Today => app.today.language_lock.estimates_note.clone(),
         Page::Insights => app.insights.language_lock.observations_note.clone(),
+        Page::Shipping => app.today.language_lock.shipping_note.clone(),
+        Page::Settings => "opt-in GitHub - never invent when unconfigured".into(),
         _ => LanguageLock::default().observations_note,
     };
     let period_chip = format!(" {}d ", app.days);
@@ -437,9 +473,9 @@ fn keymap_for(page: Page) -> &'static str {
         Page::Today => "tab/hl pages \u{00b7} d period \u{00b7} 1 today \u{00b7} 4 insights \u{00b7} q quit",
         Page::Insights => "tab/hl pages \u{00b7} d period \u{00b7} 1 today \u{00b7} 4 insights \u{00b7} q quit",
         Page::Activity | Page::Tools => "stub view \u{00b7} tab/hl pages \u{00b7} 1 today \u{00b7} 4 insights \u{00b7} q quit",
-        Page::Shipping => "shipping stub \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
+        Page::Shipping => "shipping \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
         Page::Share => "share off (v1) \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
-        Page::Settings => "settings stub \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
+        Page::Settings => "settings - github opt-in \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
     }
 }
 
@@ -576,23 +612,25 @@ fn draw_today(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(table, mid[0]);
 
     let ship = &d.shipping;
-    let stub = if ship.is_stub { " \u{00b7} stub" } else { "" };
+    let stub = if ship.is_stub { " \u{00b7} unconfigured" } else { "" };
     let dash = "\u{2014}";
+    let fmt_ship = |v: Option<i64>| -> String { if ship.is_stub { dash.to_string() } else { v.map(|n| n.to_string()).unwrap_or_else(|| dash.to_string()) } };
+    let ship_style = if ship.is_stub { muted() } else { title_style() };
     let ship_lines = vec![
         Line::from(vec![
             Span::styled("merged prs", dim()),
             Span::raw("      "),
-            Span::styled(dash, muted()),
+            Span::styled(fmt_ship(ship.merged_prs), ship_style),
         ]),
         Line::from(vec![
             Span::styled("commits", dim()),
             Span::raw("        "),
-            Span::styled(dash, muted()),
+            Span::styled(fmt_ship(ship.commits), ship_style),
         ]),
         Line::from(vec![
             Span::styled("files touched", dim()),
             Span::raw("  "),
-            Span::styled(dash, muted()),
+            Span::styled(fmt_ship(ship.files_touched), ship_style),
         ]),
         Line::from(""),
         Line::from(Span::styled(ship.note.clone(), dim())),
@@ -720,6 +758,47 @@ fn draw_insights(f: &mut Frame, area: Rect, app: &App) {
         cols[1],
     );
 }
+
+fn draw_shipping(f: &mut Frame, area: Rect, app: &App) {
+    let ship = &app.today.shipping;
+    let dash = "\u{2014}";
+    let fmt = |v: Option<i64>| -> String {
+        if ship.is_stub { dash.to_string() } else { v.map(|n| n.to_string()).unwrap_or_else(|| dash.to_string()) }
+    };
+    let title = if ship.is_stub { "Shipping \u{2014} unconfigured" } else { "Shipping \u{2014} GitHub" };
+    let mut lines = vec![
+        Line::from(Span::styled(title, title_style())),
+        Line::from(""),
+        Line::from(vec![Span::styled("merged PRs      ", dim()), Span::styled(fmt(ship.merged_prs), if ship.is_stub { muted() } else { accent().add_modifier(Modifier::BOLD) })]),
+        Line::from(vec![Span::styled("commits         ", dim()), Span::styled(fmt(ship.commits), if ship.is_stub { muted() } else { accent().add_modifier(Modifier::BOLD) })]),
+        Line::from(vec![Span::styled("files touched   ", dim()), Span::styled(fmt(ship.files_touched), if ship.is_stub { muted() } else { accent().add_modifier(Modifier::BOLD) })]),
+        Line::from(""),
+        Line::from(Span::styled(ship.note.clone(), muted())),
+        Line::from(""),
+        Line::from(Span::styled("correlation with sessions \u{2014} not a productivity score", dim())),
+        Line::from(Span::styled("estimates \u{2260} invoice \u{00b7} observations, not a score \u{00b7} Share Off default", dim())),
+    ];
+    if let Some(login) = &ship.login {
+        lines.insert(2, Line::from(Span::styled(format!("user: {login} via {}", ship.auth_source.as_deref().unwrap_or("?")), muted())));
+    }
+    f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }).block(panel("shipping")), area);
+}
+
+fn draw_settings(f: &mut Frame, area: Rect, app: &App) {
+    let path = crate::adapters::settings_path_display();
+    let opted = crate::adapters::is_opted_in();
+    let configured = app.github_configured;
+    let body = format!(
+        "GitHub shipping (opt-in)\n\nconfigured now: {configured}\nopted in: {opted}\n\nHow to configure (no secrets in repo):\n  1. Set ARGUS_GITHUB_TOKEN to a personal PAT, or\n  2. Set ARGUS_GITHUB_ENABLED=1 and use authenticated gh, or\n  3. Write {{\"github\":{{\"enabled\":true}}}} to:\n     {path}\n\nPrefer gh when authenticated. Never invents counts when unconfigured.\nShare to org defaults Off."
+    );
+    let lines = vec![
+        Line::from(Span::styled("Settings", title_style())),
+        Line::from(""),
+        Line::from(Span::styled(body, muted())),
+    ];
+    f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }).block(panel("settings")), area);
+}
+
 
 fn draw_stub(f: &mut Frame, area: Rect, page: Page) {
     let name = page.title();

@@ -1,0 +1,144 @@
+﻿{
+  "github_configured": false,
+  "insights": {
+    "context": {
+      "activity": [
+        {
+          "est_spend_usd": 0.0,
+          "model": "grok-4.6",
+          "time_range": "20:29 - 20:31",
+          "tokens": 21241,
+          "tokens_known": true,
+          "tool": "Grok"
+        }
+      ],
+      "adapter_status": [
+        {
+          "detail": "52 sessions from ~/.grok (context tokens; cost incomplete)",
+          "name": "Grok",
+          "ok": true,
+          "partial": true
+        }
+      ],
+      "by_tool": [
+        {
+          "cost_incomplete": true,
+          "sessions": 1,
+          "share_pct": 100.0,
+          "tokens": 21241,
+          "tokens_known": true,
+          "tool": "Grok"
+        }
+      ],
+      "est_spend_usd": 0.0,
+      "language_lock": {
+        "estimates_note": "Local only ΓÇö estimates Γëá invoice",
+        "footer": "aggregates only ΓÇö no raw prompts or code ΓÇö local-first",
+        "observations_note": "Local only ΓÇö observations, not a score",
+        "shipping_note": "correlation with sessions ΓÇö not a productivity score"
+      },
+      "models_unique": 1,
+      "period_days": 7,
+      "sessions": 1,
+      "shipping": {
+        "auth_source": null,
+        "commits": null,
+        "configured": false,
+        "files_touched": null,
+        "is_stub": true,
+        "login": null,
+        "merged_prs": null,
+        "note": "GitHub shipping not configured ΓÇö enable github.enabled in C:\\Users\\Gadi\\AppData\\Local\\argus-local\\settings.json or set ARGUS_GITHUB_TOKEN / ARGUS_GITHUB_ENABLED (uses gh when authenticated). No observed PR/commit counts."
+      },
+      "tokens": 21241,
+      "tokens_known": true,
+      "tool_accept_pct": 100.0,
+      "used_fixtures": false
+    },
+    "findings": [
+      {
+        "evidence": "why this showed: 4/4 proposed tools accepted",
+        "summary": "100% accept ΓÇö 1 sessions",
+        "title": "Tool accept stayed high"
+      },
+      {
+        "evidence": "why this showed: 21.2K tokens, no I/O data",
+        "summary": "signals lack billable I/O ΓÇö treat $ as unknown",
+        "title": "Grok cost incomplete"
+      },
+      {
+        "evidence": "why this showed: GitHub adapter not opted in (Settings / ARGUS_GITHUB_TOKEN / ARGUS_GITHUB_ENABLED)",
+        "summary": "Opt-in GitHub shipping is off ΓÇö no observed PR/commit counts",
+        "title": "Shipping not configured"
+      }
+    ],
+    "language_lock": {
+      "estimates_note": "Local only ΓÇö estimates Γëá invoice",
+      "footer": "aggregates only ΓÇö no raw prompts or code ΓÇö local-first",
+      "observations_note": "Local only ΓÇö observations, not a score",
+      "shipping_note": "correlation with sessions ΓÇö not a productivity score"
+    },
+    "period_days": 7
+  },
+  "language_lock": {
+    "estimates": "estimates != invoice",
+    "footer": "aggregates only ΓÇö no raw prompts or code ΓÇö local-first",
+    "observations": "observations, not a score",
+    "shipping": "correlation with sessions ΓÇö not a productivity score"
+  },
+  "today": {
+    "activity": [
+      {
+        "est_spend_usd": 0.0,
+        "model": "grok-4.6",
+        "time_range": "20:29 - 20:31",
+        "tokens": 21241,
+        "tokens_known": true,
+        "tool": "Grok"
+      }
+    ],
+    "adapter_status": [
+      {
+        "detail": "52 sessions from ~/.grok (context tokens; cost incomplete)",
+        "name": "Grok",
+        "ok": true,
+        "partial": true
+      }
+    ],
+    "by_tool": [
+      {
+        "cost_incomplete": true,
+        "sessions": 1,
+        "share_pct": 100.0,
+        "tokens": 21241,
+        "tokens_known": true,
+        "tool": "Grok"
+      }
+    ],
+    "est_spend_usd": 0.0,
+    "language_lock": {
+      "estimates_note": "Local only ΓÇö estimates Γëá invoice",
+      "footer": "aggregates only ΓÇö no raw prompts or code ΓÇö local-first",
+      "observations_note": "Local only ΓÇö observations, not a score",
+      "shipping_note": "correlation with sessions ΓÇö not a productivity score"
+    },
+    "models_unique": 1,
+    "period_days": 7,
+    "sessions": 1,
+    "shipping": {
+      "auth_source": null,
+      "commits": null,
+      "configured": false,
+      "files_touched": null,
+      "is_stub": true,
+      "login": null,
+      "merged_prs": null,
+      "note": "GitHub shipping not configured ΓÇö enable github.enabled in C:\\Users\\Gadi\\AppData\\Local\\argus-local\\settings.json or set ARGUS_GITHUB_TOKEN / ARGUS_GITHUB_ENABLED (uses gh when authenticated). No observed PR/commit counts."
+    },
+    "tokens": 21241,
+    "tokens_known": true,
+    "tool_accept_pct": 100.0,
+    "used_fixtures": false
+  },
+  "used_fixtures": false
+}

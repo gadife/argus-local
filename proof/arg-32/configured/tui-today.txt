@@ -1,0 +1,40 @@
+ Argus Local                                                                                        
+  Today  │  Activity  │  Tools  │  Insights  │  Shipping  │  Share  │  Settings                     
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Today  7d   Local only — estimates ≠ invoice                                                        
+ adapters  Grok · partial   GitHub · ok     Share · Off                                             
+                                                                                                    
+1                  │21.2K              │$0                 │100%               │1                  │
+sessions           │tokens             │est. spend         │tool accept        │models             │
+completed          │estimated          │estimate ≠ invoice │accepted / proposed│unique             │
+                   │                   │                   │                   │                   │
+┌ by tool ─────────────────────────────────────────────────────────────────────────────────────────┐
+│found on device only                                                                              │
+│ Grok        21.2K    1s  ██████████████████  100%  cost incomplete                               │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌ activity ─────────────────────────────────────────────────────┐┌ shipping ───────────────────────┐
+│time          tool       model              tokens     est.    ││merged prs      9                │
+│20:29 - 20:31 Grok       grok-4.6           21.2K      $0      ││commits        34                │
+│                                                               ││files touched  95                │
+│                                                               ││                                 │
+│                                                               ││gadife via gh · last 7d —        │
+│                                                               ││correlation with sessions — not a│
+│                                                               ││productivity score. Files touched│
+│                                                               ││= sum of changed_files on merged │
+│                                                               ││PRs in period.                   │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+└───────────────────────────────────────────────────────────────┘└─────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  │  tab/hl pages · d period · 1 today · 4 ins

@@ -184,7 +184,7 @@ function renderToday(){
     <td>${fmtTokKnown(a.tokens,a.tokens_known)} tokens</td>
     <td>${a.tokens_known?fmtUsd(a.est_spend_usd):'—'}</td></tr>`).join('');
   const ship=d.shipping||{};
-  const stubTag=ship.is_stub?'<span class="stub-tag">stub</span>':'';
+  const stubTag=ship.is_stub?'<span class="stub-tag">unconfigured</span>':'';
   $('#content').innerHTML=`
     <div class="kpis">
       <div class="card kpi"><div class="label">Sessions</div><div class="val">${d.sessions}</div><div class="sub">Completed sessions</div></div>
@@ -208,7 +208,7 @@ function renderToday(){
           <li><span>Commits</span><strong>${shipVal(ship,'commits')}</strong></li>
           <li><span>Files touched</span><strong>${shipVal(ship,'files_touched')}</strong></li>
         </ul>
-        <div class="ship-note">${esc(ship.note||'Stub / opt-in GitHub placeholder — not observed shipping data.')}</div>
+        <div class="ship-note">${esc(ship.note||'GitHub shipping not configured — not observed shipping data.')}</div>
       </div>
     </div>`;
 }
@@ -245,6 +245,24 @@ function renderInsights(){
       </div>
     </div>`;
 }
+function renderShipping(){
+  const d=DATA.today; const ship=d.shipping||{};
+  $('#title').textContent='Shipping - Last '+DAYS+' days';
+  $('#lockLine').textContent=(d.language_lock&&d.language_lock.shipping_note)||'correlation with sessions - not a productivity score';
+  $('#status').innerHTML=statusHtml(d.adapter_status);
+  syncFixtureBanner();
+  const stubTag=ship.is_stub?'<span class="stub-tag">unconfigured</span>':'';
+  const who=ship.login?('<div class="ship-note" style="border:0;padding-top:0;margin-top:0">user '+esc(ship.login)+' via '+esc(ship.auth_source||'?')+'</div>'):'';
+  $('#content').innerHTML='<div class="card"><div class="section-title" style="margin-top:0">Shipping (opt-in GitHub)'+stubTag+'</div>'+who+'<ul class="ship-list"><li><span>Merged PRs</span><strong>'+shipVal(ship,'merged_prs')+'</strong></li><li><span>Commits</span><strong>'+shipVal(ship,'commits')+'</strong></li><li><span>Files touched</span><strong>'+shipVal(ship,'files_touched')+'</strong></li></ul><div class="ship-note">'+esc(ship.note||'GitHub shipping not configured.')+'</div><p style="color:var(--dim);font-size:12px;margin:12px 0 0">correlation with sessions - not a productivity score; estimates != invoice; observations not a score; Share Off default</p></div>';
+}
+function renderSettings(){
+  const cfg=!!(DATA&&DATA.github_configured);
+  const ship=(DATA&&DATA.today&&DATA.today.shipping)||{};
+  $('#title').textContent='Settings';
+  $('#lockLine').textContent='opt-in GitHub - never invent when unconfigured';
+  syncFixtureBanner();
+  $('#content').innerHTML='<div class="card"><div class="section-title" style="margin-top:0">GitHub shipping</div><p style="color:var(--muted)">Configured now: <strong style="color:var(--text)">'+(cfg?'yes':'no')+'</strong>'+(ship.login?(' · '+esc(ship.login)+' via '+esc(ship.auth_source||'?')):'')+'</p><p style="color:var(--muted);font-size:13px">How to configure (secrets stay on this machine - never commit PATs):</p><ol style="color:var(--muted);font-size:13px;line-height:1.6"><li>Set env <code>ARGUS_GITHUB_TOKEN</code> to a personal PAT, or</li><li>Set <code>ARGUS_GITHUB_ENABLED=1</code> and use authenticated <code>gh</code>, or</li><li>Write <code>{"github":{"enabled":true}}</code> to <code>%LOCALAPPDATA%/argus-local/settings.json</code> (uses gh/token; no secret in the repo).</li></ol><p style="color:var(--dim);font-size:12px">When unconfigured, Shipping shows dashes - no fake stub counts. Share Off default.</p></div>';
+}
 function renderStub(name){
   $('#title').textContent=name+' — stub';
   $('#lockLine').textContent='Local only — observations, not a score';
@@ -256,6 +274,8 @@ function render(){
   if(!DATA)return;
   if(PAGE==='today')renderToday();
   else if(PAGE==='insights')renderInsights();
+  else if(PAGE==='shipping')renderShipping();
+  else if(PAGE==='settings')renderSettings();
   else renderStub(PAGE[0].toUpperCase()+PAGE.slice(1));
 }
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
