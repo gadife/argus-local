@@ -1,6 +1,6 @@
 # Argus Local
 
-One-process **local-first** dashboard for engineers. A single Rust binary (`argus-local`) reads local Claude Code / Cursor / Grok session data from disk (absent tools like Codex are hidden — no stub pills), indexes into SQLite, rolls up metrics + deterministic insights, and serves an embedded HTML UI on `127.0.0.1` — or a full-screen terminal UI via `argus-local tui`.
+One-process **local-first** dashboard for engineers. A single Rust binary (`argus-local`) reads local Claude Code / Cursor / Grok session data from disk (absent tools like Codex are hidden — no stub pills), optionally joins **opt-in GitHub shipping** (merged PRs / commits / files), indexes into SQLite, rolls up metrics + deterministic insights, and serves an embedded HTML UI on `127.0.0.1` — or a full-screen terminal UI via `argus-local tui`.
 
 > **Language lock**
 > - `estimates ≠ invoice`
@@ -14,6 +14,7 @@ One-process **local-first** dashboard for engineers. A single Rust binary (`argu
 
 - Rust stable (1.70+)
 - Windows / macOS / Linux
+- Optional: authenticated [`gh`](https://cli.github.com/) CLI for GitHub shipping
 
 ## Build
 
@@ -38,7 +39,7 @@ argus-local open --json
 # Force fixture demo data
 argus-local open --fixtures
 
-# Full-screen terminal UI (Today / Insights + nav stubs) — same engine as HTML
+# Full-screen terminal UI (Today / Insights / Shipping / Settings) — same engine as HTML
 argus-local tui
 argus-local tui --fixtures
 argus-local tui --days 7
@@ -64,22 +65,41 @@ SQLite index: `%LOCALAPPDATA%/argus-local/index.sqlite` (Windows) or platform eq
 | Cursor | `state.vscdb` / ai-tracking under Cursor User storage | Best-effort; copies DB to avoid locks |
 | Codex | Hidden when absent | No local adapter in v1 — never invent stub rows |
 | Grok | `~/.grok/sessions/**/signals.json` (+ summary) | Live from disk; context tokens; marked **cost incomplete** |
+| GitHub shipping | Opt-in (`gh` and/or PAT) | Merged PRs / commits / files for selected period; **hidden counts when unconfigured** |
 
-If no Claude/Cursor/Grok sessions are found, **fixture demo data** loads automatically so the UI always demos.
+If no Claude/Cursor/Grok sessions are found, **fixture demo data** loads automatically so the UI always demos. GitHub shipping stays absent unless opted in.
+
+## Configure GitHub shipping (opt-in)
+
+Shipping never invents counts. When unconfigured, the Shipping panel shows dashes / an **unconfigured** state.
+
+Pick **one** (secrets stay on this machine — **never commit PATs** or tokens to the repo):
+
+1. **Env PAT:** set `ARGUS_GITHUB_TOKEN` to a personal access token (`repo` scope is enough for private PR search). Presence of the token opts in.
+2. **Env flag + gh:** set `ARGUS_GITHUB_ENABLED=1` (or `true`) and authenticate with `gh auth login`. Argus prefers `gh api` when `gh` is available.
+3. **Local settings file** (no secrets required in the file): write `%LOCALAPPDATA%/argus-local/settings.json` (or `$XDG_DATA_HOME/argus-local/settings.json`):
+
+```json
+{ "github": { "enabled": true } }
+```
+
+Then use authenticated `gh`, or set `ARGUS_GITHUB_TOKEN`. The settings path is documented in the Settings page of the UI / TUI.
 
 ## UI
 
-- **Today** — KPI strip, By tool, Activity, Shipping opt-in stub
-- **Insights** — 3-5 deterministic findings with evidence + Context panel
-- Stub nav: Activity / Tools / Shipping / Share / Settings
+- **Today** — KPI strip, By tool, Activity, Shipping (real or unconfigured)
+- **Insights** — 3–5 deterministic findings with evidence + Context panel
+- **Shipping** — merged PRs, commits, files touched for the selected period
+- **Settings** — how to opt in to GitHub; Share Off reminder
+- Stub nav: Activity / Tools / Share
 
 ### Terminal UI (`argus-local tui`)
 
 Same data path as HTML (adapters → SQLite → rollups/insights). Renders whole screens in the terminal with keyboard nav — not a JSON dump. Built with **ratatui + crossterm**.
 
-## Out of scope (v1)
+## Out of scope (this ticket / v1)
 
-Real Codex adapter, org Share bridge, GitHub shipping join, native GUI, Node sidecar, Docker.
+Linear adapter, Jira, org Share bridge, inventing shipping when GitHub isn’t configured, real Codex adapter, native GUI, Node sidecar, Docker.
 
 ## License
 
@@ -87,6 +107,4 @@ MIT
 
 ## Proof screenshots
 
-See `proof/today.png` and `proof/insights.png` from `argus-local open --fixtures` on gili-pc.
-
-TUI proofs: `proof/tui-today.txt` / `proof/tui-today.png` and `proof/tui-insights.txt` / `proof/tui-insights.png` from `argus-local tui --fixtures --proof proof/`.
+See `proof/` for HTML + TUI Shipping screens (configured + unconfigured) attached on Linear ARG-32.

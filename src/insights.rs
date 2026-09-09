@@ -1,6 +1,6 @@
 //! Deterministic insights - observations with evidence, never grades.
 use crate::models::{Finding, InsightsPayload, LanguageLock, SessionRecord};
-use crate::rollups::{estimate_spend_usd, rollup};
+use crate::rollups::{estimate_spend_usd, rollup, ShippingContext};
 use chrono::{Duration, Utc};
 
 pub fn build_insights(
@@ -8,9 +8,32 @@ pub fn build_insights(
     period_days: u32,
     adapter_status: Vec<crate::models::AdapterStatus>,
     used_fixtures: bool,
+    shipping: ShippingContext<'_>,
 ) -> InsightsPayload {
-    let context = rollup(sessions, period_days, adapter_status, used_fixtures);
-    let prior = rollup(sessions, period_days * 2, vec![], used_fixtures);
+    let context = rollup(
+        sessions,
+        period_days,
+        adapter_status,
+        used_fixtures,
+        ShippingContext {
+            configured: shipping.configured,
+            events: shipping.events,
+            auth_source: shipping.auth_source,
+            login: shipping.login,
+        },
+    );
+    let prior = rollup(
+        sessions,
+        period_days * 2,
+        vec![],
+        used_fixtures,
+        ShippingContext {
+            configured: shipping.configured,
+            events: shipping.events,
+            auth_source: shipping.auth_source,
+            login: shipping.login,
+        },
+    );
     let mut findings = Vec::new();
 
     // 1) Tool share shift — only when share materially INCREASED (not flat / down).
@@ -22,7 +45,6 @@ pub fn build_insights(
             .map(|t| t.share_pct)
             .unwrap_or(0.0);
         let delta = top.share_pct - prior_share;
-        // Material increase only (suppress unchanged e.g. 52%=52%).
         if delta >= 5.0 {
             findings.push(Finding {
                 title: format!("{} took more of your week", top.tool),
@@ -78,7 +100,6 @@ pub fn build_insights(
             break;
         }
     }
-    // Also surface from adapter status
     if !findings.iter().any(|f| f.title.contains("cost incomplete")) {
         if context
             .adapter_status
@@ -93,23 +114,24 @@ pub fn build_insights(
         }
     }
 
-    // 4) Shipping correlation — clearly stub / not observed counts
-    if context.shipping.is_stub {
+    // 4) Shipping — unconfigured vs observed correlation (never invent counts)
+    if context.shipping.is_stub || !context.shipping.configured {
         findings.push(Finding {
-            title: "Shipping is a stub placeholder".into(),
-            summary: "Opt-in GitHub shipping is not connected \u{2014} no observed PR/commit counts".into(),
-            evidence: "why this showed: shipping adapter is stub/opt-in only".into(),
+            title: "Shipping not configured".into(),
+            summary: "Opt-in GitHub shipping is off \u{2014} no observed PR/commit counts".into(),
+            evidence: "why this showed: GitHub adapter not opted in (Settings / ARGUS_GITHUB_TOKEN / ARGUS_GITHUB_ENABLED)".into(),
         });
     } else {
+        let prs = context.shipping.merged_prs.unwrap_or(0);
         findings.push(Finding {
-            title: "Shipping clustered midweek".into(),
+            title: "Shipping alongside sessions".into(),
             summary: format!(
-                "{} merged PRs \u{2014} sessions overlapped those days (correlation only)",
-                context.shipping.merged_prs.unwrap_or(0)
+                "{prs} merged PRs \u{2014} sessions overlapped the window (correlation only, not a score)"
             ),
             evidence: format!(
-                "why this showed: {} PRs, {} sessions in window",
-                context.shipping.merged_prs.unwrap_or(0),
+                "why this showed: {prs} merged PRs, {} commits, {} files touched, {} sessions in window",
+                context.shipping.commits.unwrap_or(0),
+                context.shipping.files_touched.unwrap_or(0),
                 context.sessions
             ),
         });
@@ -137,7 +159,6 @@ pub fn build_insights(
         }
     }
 
-    // Ensure 3-5 findings
     findings.truncate(5);
     while findings.len() < 3 {
         findings.push(Finding {

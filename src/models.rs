@@ -74,14 +74,29 @@ pub struct ActivityRow {
     pub est_spend_usd: f64,
 }
 
+/// Shipping panel payload. When `is_stub` / not configured: hide numbers (no fake counts).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShippingStub {
-    /// Stub/opt-in placeholder only — not observed GitHub data in v1.
+    /// True when GitHub is unconfigured — UI must not invent PR/commit counts.
     pub is_stub: bool,
+    pub configured: bool,
     pub merged_prs: Option<i64>,
     pub commits: Option<i64>,
     pub files_touched: Option<i64>,
     pub note: String,
+    pub auth_source: Option<String>,
+    pub login: Option<String>,
+}
+
+/// Observed GitHub shipping event cached in SQLite (90d window).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShippingEvent {
+    pub id: String,
+    pub kind: String, // "pr" | "commit"
+    pub occurred_at: DateTime<Utc>,
+    pub files_touched: i64,
+    pub repo: String,
+    pub title: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -97,7 +112,7 @@ impl Default for LanguageLock {
         Self {
             estimates_note: "Local only \u{2014} estimates \u{2260} invoice".into(),
             observations_note: "Local only \u{2014} observations, not a score".into(),
-            shipping_note: "Stub / opt-in GitHub placeholder \u{2014} not observed shipping data.".into(),
+            shipping_note: "correlation with sessions \u{2014} not a productivity score".into(),
             footer: "aggregates only \u{2014} no raw prompts or code \u{2014} local-first".into(),
         }
     }

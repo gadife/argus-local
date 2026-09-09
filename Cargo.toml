@@ -1,4 +1,4 @@
-﻿[package]
+[package]
 name = "argus-local"
 version = "0.1.0"
 edition = "2021"
@@ -25,3 +25,4 @@ uuid = { version = "1", features = ["v4"] }
 dirs = "5"
 ratatui = "0.29"
 crossterm = "0.28"
+ureq = { version = "2", default-features = true }

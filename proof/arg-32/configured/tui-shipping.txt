@@ -1,0 +1,40 @@
+ Argus Local                                                                                        
+  Today  │  Activity  │  Tools  │  Insights  │  Shipping  │  Share  │  Settings                     
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Shipping  7d   correlation with sessions — not a productivity score                                 
+ adapters  Grok · partial   GitHub · ok     Share · Off                                             
+                                                                                                    
+┌ shipping ────────────────────────────────────────────────────────────────────────────────────────┐
+│Shipping — GitHub                                                                                 │
+│                                                                                                  │
+│user: gadife via gh                                                                               │
+│merged PRs      9                                                                                 │
+│commits         34                                                                                │
+│files touched   95                                                                                │
+│                                                                                                  │
+│gadife via gh · last 7d — correlation with sessions — not a productivity score. Files touched =   │
+│sum of changed_files on merged PRs in period.                                                     │
+│                                                                                                  │
+│correlation with sessions — not a productivity score                                              │
+│estimates ≠ invoice · observations, not a score · Share Off default                               │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  │  shipping · tab/hl · 1 today · q quit     

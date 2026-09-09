@@ -1,0 +1,156 @@
+﻿{
+  "github_configured": true,
+  "insights": {
+    "context": {
+      "activity": [
+        {
+          "est_spend_usd": 0.0,
+          "model": "grok-4.6",
+          "time_range": "20:29 - 20:31",
+          "tokens": 21241,
+          "tokens_known": true,
+          "tool": "Grok"
+        }
+      ],
+      "adapter_status": [
+        {
+          "detail": "52 sessions from ~/.grok (context tokens; cost incomplete)",
+          "name": "Grok",
+          "ok": true,
+          "partial": true
+        },
+        {
+          "detail": "gadife via gh: 25 merged PRs, 124 commits (90d cache)",
+          "name": "GitHub",
+          "ok": true,
+          "partial": false
+        }
+      ],
+      "by_tool": [
+        {
+          "cost_incomplete": true,
+          "sessions": 1,
+          "share_pct": 100.0,
+          "tokens": 21241,
+          "tokens_known": true,
+          "tool": "Grok"
+        }
+      ],
+      "est_spend_usd": 0.0,
+      "language_lock": {
+        "estimates_note": "Local only ΓÇö estimates Γëá invoice",
+        "footer": "aggregates only ΓÇö no raw prompts or code ΓÇö local-first",
+        "observations_note": "Local only ΓÇö observations, not a score",
+        "shipping_note": "correlation with sessions ΓÇö not a productivity score"
+      },
+      "models_unique": 1,
+      "period_days": 7,
+      "sessions": 1,
+      "shipping": {
+        "auth_source": "gh",
+        "commits": 34,
+        "configured": true,
+        "files_touched": 95,
+        "is_stub": false,
+        "login": "gadife",
+        "merged_prs": 9,
+        "note": "gadife via gh ┬╖ last 7d ΓÇö correlation with sessions ΓÇö not a productivity score. Files touched = sum of changed_files on merged PRs in period."
+      },
+      "tokens": 21241,
+      "tokens_known": true,
+      "tool_accept_pct": 100.0,
+      "used_fixtures": false
+    },
+    "findings": [
+      {
+        "evidence": "why this showed: 4/4 proposed tools accepted",
+        "summary": "100% accept ΓÇö 1 sessions",
+        "title": "Tool accept stayed high"
+      },
+      {
+        "evidence": "why this showed: 21.2K tokens, no I/O data",
+        "summary": "signals lack billable I/O ΓÇö treat $ as unknown",
+        "title": "Grok cost incomplete"
+      },
+      {
+        "evidence": "why this showed: 9 merged PRs, 34 commits, 95 files touched, 1 sessions in window",
+        "summary": "9 merged PRs ΓÇö sessions overlapped the window (correlation only, not a score)",
+        "title": "Shipping alongside sessions"
+      }
+    ],
+    "language_lock": {
+      "estimates_note": "Local only ΓÇö estimates Γëá invoice",
+      "footer": "aggregates only ΓÇö no raw prompts or code ΓÇö local-first",
+      "observations_note": "Local only ΓÇö observations, not a score",
+      "shipping_note": "correlation with sessions ΓÇö not a productivity score"
+    },
+    "period_days": 7
+  },
+  "language_lock": {
+    "estimates": "estimates != invoice",
+    "footer": "aggregates only ΓÇö no raw prompts or code ΓÇö local-first",
+    "observations": "observations, not a score",
+    "shipping": "correlation with sessions ΓÇö not a productivity score"
+  },
+  "today": {
+    "activity": [
+      {
+        "est_spend_usd": 0.0,
+        "model": "grok-4.6",
+        "time_range": "20:29 - 20:31",
+        "tokens": 21241,
+        "tokens_known": true,
+        "tool": "Grok"
+      }
+    ],
+    "adapter_status": [
+      {
+        "detail": "52 sessions from ~/.grok (context tokens; cost incomplete)",
+        "name": "Grok",
+        "ok": true,
+        "partial": true
+      },
+      {
+        "detail": "gadife via gh: 25 merged PRs, 124 commits (90d cache)",
+        "name": "GitHub",
+        "ok": true,
+        "partial": false
+      }
+    ],
+    "by_tool": [
+      {
+        "cost_incomplete": true,
+        "sessions": 1,
+        "share_pct": 100.0,
+        "tokens": 21241,
+        "tokens_known": true,
+        "tool": "Grok"
+      }
+    ],
+    "est_spend_usd": 0.0,
+    "language_lock": {
+      "estimates_note": "Local only ΓÇö estimates Γëá invoice",
+      "footer": "aggregates only ΓÇö no raw prompts or code ΓÇö local-first",
+      "observations_note": "Local only ΓÇö observations, not a score",
+      "shipping_note": "correlation with sessions ΓÇö not a productivity score"
+    },
+    "models_unique": 1,
+    "period_days": 7,
+    "sessions": 1,
+    "shipping": {
+      "auth_source": "gh",
+      "commits": 34,
+      "configured": true,
+      "files_touched": 95,
+      "is_stub": false,
+      "login": "gadife",
+      "merged_prs": 9,
+      "note": "gadife via gh ┬╖ last 7d ΓÇö correlation with sessions ΓÇö not a productivity score. Files touched = sum of changed_files on merged PRs in period."
+    },
+    "tokens": 21241,
+    "tokens_known": true,
+    "tool_accept_pct": 100.0,
+    "used_fixtures": false
+  },
+  "used_fixtures": false
+}
