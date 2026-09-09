@@ -1,0 +1,22 @@
+﻿{
+    "id":  "fixture:claude:arg37-prompts-demo",
+    "tool":  "Claude Code",
+    "model":  "Claude Sonnet 4",
+    "started_at":  "2026-09-09 19:05",
+    "ended_at":  "2026-09-09 19:23",
+    "duration":  "18m",
+    "input_tokens":  12000,
+    "output_tokens":  3400,
+    "tokens":  15400,
+    "tokens_known":  true,
+    "tools_proposed":  2,
+    "tools_accepted":  2,
+    "cost_complete":  true,
+    "source":  "fixture",
+    "adapter_note":  "",
+    "est_spend_usd":  0.087,
+    "prompts_enabled":  true,
+    "prompt_text":  "Summarize yesterday\u0027s local adapter scan and list any sessions with incomplete cost.",
+    "response_text":  "Scanned Claude Code, Cursor, and Grok locally. Two Grok sessions report context tokens only (cost incomplete). No raw prompts were included because prompts opt-in was Off.",
+    "prompts_missing":  false
+}

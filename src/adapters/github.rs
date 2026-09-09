@@ -3,9 +3,7 @@
 use crate::models::{AdapterStatus, ShippingEvent};
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Duration, NaiveDate, Utc};
-use serde::Deserialize;
 use serde_json::Value;
-use std::path::PathBuf;
 use std::process::Command;
 
 #[derive(Debug, Clone)]
@@ -18,59 +16,13 @@ pub struct GitHubScan {
     pub login: Option<String>,
 }
 
-#[derive(Debug, Deserialize, Default)]
-struct SettingsFile {
-    #[serde(default)]
-    github: GitHubSettings,
-}
-
-#[derive(Debug, Deserialize, Default)]
-struct GitHubSettings {
-    #[serde(default)]
-    enabled: bool,
-}
-
-fn settings_path() -> PathBuf {
-    dirs::data_local_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("argus-local")
-        .join("settings.json")
-}
-
 pub fn settings_path_display() -> String {
-    settings_path().display().to_string()
-}
-
-fn read_settings() -> SettingsFile {
-    let path = settings_path();
-    let Ok(raw) = std::fs::read_to_string(&path) else {
-        return SettingsFile::default();
-    };
-    serde_json::from_str(&raw).unwrap_or_default()
-}
-
-fn env_truthy(name: &str) -> bool {
-    match std::env::var(name) {
-        Ok(v) => {
-            let t = v.trim().to_lowercase();
-            !(t.is_empty() || t == "0" || t == "false" || t == "no" || t == "off")
-        }
-        Err(_) => false,
-    }
+    crate::settings::settings_path_display()
 }
 
 /// Opt-in: ARGUS_GITHUB_TOKEN, ARGUS_GITHUB_ENABLED, or settings.json github.enabled.
 pub fn is_opted_in() -> bool {
-    if std::env::var("ARGUS_GITHUB_TOKEN")
-        .map(|v| !v.trim().is_empty())
-        .unwrap_or(false)
-    {
-        return true;
-    }
-    if env_truthy("ARGUS_GITHUB_ENABLED") {
-        return true;
-    }
-    read_settings().github.enabled
+    crate::settings::github_opted_in()
 }
 
 fn resolve_token() -> Option<(String, String)> {

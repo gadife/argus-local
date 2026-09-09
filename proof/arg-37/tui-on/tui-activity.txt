@@ -1,0 +1,40 @@
+ Argus Local                                                                                        
+  Today  │  Activity  │  Tools  │  Insights  │  Shipping  │  Share  │  Settings                     
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Activity  7d    Prompts on (local)   Local only — observations, not a score                         
+ Demo fixtures — not live adapter data. Label shown so this is never silent fake-as-real.           
+                                                                                                    
+ adapters  Claude Code · ok   Cursor · ok   Codex · ok   Grok · partial     Share · Off             
+                                                                                                    
+┌ sessions · prompts opt-in ─────────────────────────────┐┌ detail ────────────────────────────────┐
+│time          tool       model         tokens   dur     ││session detail                          │
+│19:07 - 19:25 Claude Cod Claude Sonnet 15.4K    18m     ││                                        │
+│18:07 - 18:47 Cursor     GPT-4.1       250.0K   40m     ││id                                      │
+│17:07 - 18:22 Claude Cod Claude Opus 4 220.0K   1h 15m  ││fixture:claude:arg37-prompts-demo       │
+│15:07 - 15:57 Codex      Codex Medium  300.0K   50m     ││started       2026-09-09 19:07          │
+│12:07 - 12:43 Claude Cod Claude Sonnet 235.0K   36m     ││duration      18m                       │
+│11:07 - 11:32 Grok       Grok          300.0K   25m     ││tool          Claude Code               │
+│11:07 - 11:48 Cursor     claude-4-sonn 269.0K   41m     ││model         Claude Sonnet 4           │
+│07:07 - 07:44 Claude Cod Claude Sonnet 250.0K   37m     ││tokens        15.4K (in 12.0K / out     │
+│06:07 - 06:57 Codex      Codex Medium  300.0K   50m     ││3.4K)                                   │
+│04:07 - 04:49 Cursor     claude-4-sonn 288.0K   42m     ││tools prop.   2                         │
+│02:07 - 02:45 Claude Cod Claude Sonnet 265.0K   38m     ││tools accept  2                         │
+│23:07 - 23:32 Grok       Grok          300.0K   25m     ││cost          complete                  │
+│21:07 - 21:57 Codex      Codex Medium  300.0K   50m     ││est. spend    $0                        │
+│21:07 - 21:50 Cursor     GPT-4.1       307.0K   43m     ││source        fixture                   │
+│21:07 - 21:46 Claude Cod Claude Opus 4 280.0K   39m     ││                                        │
+│16:07 - 17:22 Claude Cod Claude Sonnet 295.0K   1h 15m  ││prompt                                  │
+│14:07 - 14:51 Cursor     claude-4-sonn 326.0K   44m     ││Summarize yesterday's local adapter scan│
+│12:07 - 12:57 Codex      Codex Medium  300.0K   50m     ││and list any sessions with incomplete   │
+│11:07 - 11:48 Claude Cod Claude Sonnet 310.0K   41m     ││cost.                                   │
+│07:07 - 07:52 Cursor     claude-4-sonn 345.0K   45m     ││                                        │
+│06:07 - 06:49 Claude Cod Claude Sonnet 325.0K   42m     ││response                                │
+│03:07 - 03:57 Codex      Codex Medium  300.0K   50m     ││Scanned Claude Code, Cursor, and Grok   │
+│01:07 - 01:50 Claude Cod Claude Opus 4 340.0K   43m     ││locally. Two Grok sessions report       │
+│00:07 - 00:53 Cursor     GPT-4.1       364.0K   46m     ││context tokens only (cost incomplete).  │
+│20:07 - 20:51 Claude Cod Claude Sonnet 355.0K   44m     ││No raw prompts were included because    │
+│18:07 - 18:57 Codex      Codex Medium  300.0K   50m     ││prompts opt-in was Off.                 │
+│17:07 - 17:54 Cursor     claude-4-sonn 383.0K   47m     ││                                        │
+└────────────────────────────────────────────────────────┘└────────────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+local prompts on — never uploaded — Share Off  │  j/k select · Enter detail · e expand · Esc back · 

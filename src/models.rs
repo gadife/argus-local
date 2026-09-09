@@ -113,6 +113,36 @@ pub struct ShippingEvent {
     pub title: String,
 }
 
+
+/// Per-session detail payload (Activity drill-in). Prompt/response only when opted in.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionDetail {
+    pub id: String,
+    pub tool: String,
+    pub model: String,
+    pub started_at: String,
+    pub ended_at: String,
+    pub duration: String,
+    pub input_tokens: i64,
+    pub output_tokens: i64,
+    pub tokens: i64,
+    pub tokens_known: bool,
+    pub tools_proposed: i64,
+    pub tools_accepted: i64,
+    pub cost_complete: bool,
+    pub source: String,
+    pub adapter_note: String,
+    pub est_spend_usd: f64,
+    pub prompts_enabled: bool,
+    /// Present only when prompts_enabled and adapter file had the field.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_text: Option<String>,
+    /// True when opt-in is on but this adapter/session has no recoverable text.
+    pub prompts_missing: bool,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LanguageLock {
     pub estimates_note: String,

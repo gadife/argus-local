@@ -1,0 +1,2 @@
+argus-local: indexed 48 sessions + 0 shipping events at C:\Users\Gadi\AppData\Local\argus-local\index.sqlite (fixtures=true, github_configured=false)
+argus-local listening on http://127.0.0.1:8797

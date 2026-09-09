@@ -6,6 +6,7 @@ mod insights;
 mod models;
 mod rollups;
 mod server;
+mod settings;
 mod tui;
 
 use adapters::scan_all;
@@ -193,6 +194,7 @@ fn main() -> Result<()> {
                     "insights": insights,
                     "used_fixtures": store.used_fixtures,
                     "github_configured": store.github_configured,
+                    "prompts_enabled": settings::prompts_enabled(),
                     "language_lock": {
                         "estimates": "estimates != invoice",
                         "observations": "observations, not a score",

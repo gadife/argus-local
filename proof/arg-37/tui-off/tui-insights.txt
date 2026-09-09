@@ -1,0 +1,40 @@
+ Argus Local                                                                                        
+  Today  │  Activity  │  Tools  │  Insights  │  Shipping  │  Share  │  Settings                     
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Insights  7d   Local only — observations, not a score                                               
+ Demo fixtures — not live adapter data. Label shown so this is never silent fake-as-real.           
+                                                                                                    
+ adapters  Claude Code · ok   Cursor · ok   Codex · ok   Grok · partial     Share · Off             
+                                                                                                    
+┌ findings · observations, not a score ──────────────────────┐┌ context ───────────────────────────┐
+│i Tool accept stayed high                                   ││48  sessions                        │
+│86% accept — 48 sessions                                    ││17.1M  tokens                       │
+│why this showed: 298/345 proposed tools accepted            ││$128  est. spend                    │
+│                                                            ││86%  tool accept                    │
+│! Grok cost incomplete                                      ││                                    │
+│signals lack billable I/O — treat $ as unknown              ││by tool                             │
+│why this showed: 600.0K tokens, no I/O data                 ││Claude Code███████▂░░░░░░ 8.9M      │
+│                                                            ││Cursor    ████▂░░░░░░░░░ 5.2M       │
+│i Shipping not configured                                   ││Codex     ██░░░░░░░░░░░░ 2.4M       │
+│Opt-in GitHub shipping is off — no observed PR/commit counts││Grok      ▄░░░░░░░░░░░░░ 600.0K     │
+│why this showed: GitHub adapter not opted in (Settings /    ││                                    │
+│ARGUS_GITHUB_TOKEN / ARGUS_GITHUB_ENABLED)                  ││not ranked vs peers — not a         │
+│                                                            ││productivity score                  │
+│i Sonnet dominated long sessions                            ││                                    │
+│3 sessions >1h used Claude Sonnet 4                         ││                                    │
+│why this showed: 3 sessions over 60 mins                    ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+└────────────────────────────────────────────────────────────┘└────────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  │  tab/hl pages · d period · 1 today · 4 ins
