@@ -1111,7 +1111,7 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
                 match (&texts.prompt_text, &texts.response_text) {
                     (None, None) => {
                         lines.push(Line::from(Span::styled(
-                            "prompts on \u{2014} no text fields on this adapter/session",
+                            "prompts missing \u{2014} no on-disk prompt/response text",
                             dim(),
                         )));
                     }
