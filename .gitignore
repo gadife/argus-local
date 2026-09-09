@@ -1,4 +1,4 @@
-﻿/target
+/target
 **/*.rs.bk
 .DS_Store
 *.sqlite
@@ -14,3 +14,8 @@ proof/capture.js
 proof/debug.js
 proof/debug.png
 
+# ARG-33 release binaries (portable zip packaging)
+/dist/
+proof/arg-33/*.exe
+proof/arg-33/*.zip
+proof/**/argus-local.exe

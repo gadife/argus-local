@@ -1,22 +1,48 @@
 # Argus Local
 
-One-process **local-first** dashboard for engineers. A single Rust binary (`argus-local`) reads local Claude Code / Cursor / Grok session data from disk (absent tools like Codex are hidden — no stub pills), optionally joins **opt-in GitHub shipping** (merged PRs / commits / files), indexes into SQLite, rolls up metrics + deterministic insights, and serves an embedded HTML UI on `127.0.0.1` — or a full-screen terminal UI via `argus-local tui`.
+One-process **local-first** dashboard for engineers. A single Rust binary (`argus-local`) reads local Claude Code / Cursor / Grok session data from disk (absent tools like Codex are hidden - no stub pills), optionally joins **opt-in GitHub shipping** (merged PRs / commits / files), indexes into SQLite, rolls up metrics + deterministic insights, and serves an embedded HTML UI on `127.0.0.1` - or a full-screen terminal UI via `argus-local tui`.
 
 > **Language lock**
 > - `estimates ≠ invoice`
 > - `observations, not a score`
 > - No Elite/Low labels, peer ranks, productivity scores, or causal ROI
-> - Shipping (when shown): `correlation with sessions — not a productivity score.`
-> - Footer: `aggregates only — no raw prompts or code — local-first`
+> - Shipping (when shown): `correlation with sessions - not a productivity score.`
+> - Footer: `aggregates only - no raw prompts or code - local-first`
 > - Share to org defaults **Off** (UI only in v1)
 
-## Requirements
+## Download (Windows x64) — primary
+
+No Rust toolchain required. Grab the portable zip from the latest GitHub Release:
+
+- **Release:** https://github.com/gadife/argus-local/releases/latest
+- Artifact: `argus-local-windows-x64.zip` (+ `argus-local-windows-x64.zip.sha256`)
+
+```powershell
+# 1) Download the zip + checksum from the Release page (or gh)
+# 2) Verify (optional but recommended)
+Get-FileHash .\argus-local-windows-x64.zip -Algorithm SHA256
+# compare to the published .sha256 file
+
+# 3) Unzip anywhere and run
+Expand-Archive .\argus-local-windows-x64.zip -DestinationPath .\argus-local
+cd .\argus-local
+.\argus-local.exe --help
+.\argus-local.exe open
+.\argus-local.exe tui
+.\argus-local.exe tui --fixtures --proof .\proof-out\
+```
+
+Portable zip contents: `argus-local.exe` + checksum file. No installer for v1.
+
+> Until the first Release is published, local packaging artifacts live under `proof/arg-33/` / `dist/` after `scripts/package-windows-release.ps1` (see [docs/RELEASE.md](docs/RELEASE.md)).
+
+## Optional: build from source
+
+For contributors who want to hack on Argus Local:
 
 - Rust stable (1.70+)
 - Windows / macOS / Linux
 - Optional: authenticated [`gh`](https://cli.github.com/) CLI for GitHub shipping
-
-## Build
 
 ```bash
 cargo build --release
@@ -24,26 +50,28 @@ cargo build --release
 
 Binary: `target/release/argus-local` (`.exe` on Windows).
 
-## Run
-
 ```bash
 # Scan adapters, serve UI, open browser
 cargo run --release -- open
 
-# Or after install / from target
+# Or after build
 ./target/release/argus-local open
+```
 
+## Run (after download or build)
+
+```bash
 # JSON only (no server)
 argus-local open --json
 
 # Force fixture demo data
 argus-local open --fixtures
 
-# Full-screen terminal UI (Today / Insights / Shipping / Settings) — same engine as HTML
+# Full-screen terminal UI (Today / Insights / Shipping / Settings) - same engine as HTML
 argus-local tui
 argus-local tui --fixtures
 argus-local tui --days 7
-# Keys: Tab/h/l navigate · 1–7 pages · d cycle period · q quit
+# Keys: Tab/h/l navigate · 1-7 pages · d cycle period · q quit
 
 # Non-interactive TUI screen dumps (proof)
 argus-local tui --fixtures --proof proof/
@@ -63,7 +91,7 @@ SQLite index: `%LOCALAPPDATA%/argus-local/index.sqlite` (Windows) or platform eq
 |------|--------|-------|
 | Claude Code | `~/.claude/**/*.jsonl` (+ best-effort AppData) | Real parser |
 | Cursor | `state.vscdb` / ai-tracking under Cursor User storage | Best-effort; copies DB to avoid locks |
-| Codex | Hidden when absent | No local adapter in v1 — never invent stub rows |
+| Codex | Hidden when absent | No local adapter in v1 - never invent stub rows |
 | Grok | `~/.grok/sessions/**/signals.json` (+ summary) | Live from disk; context tokens; marked **cost incomplete** |
 | GitHub shipping | Opt-in (`gh` and/or PAT) | Merged PRs / commits / files for selected period; **hidden counts when unconfigured** |
 
@@ -73,7 +101,7 @@ If no Claude/Cursor/Grok sessions are found, **fixture demo data** loads automat
 
 Shipping never invents counts. When unconfigured, the Shipping panel shows dashes / an **unconfigured** state.
 
-Pick **one** (secrets stay on this machine — **never commit PATs** or tokens to the repo):
+Pick **one** (secrets stay on this machine - **never commit PATs** or tokens to the repo):
 
 1. **Env PAT:** set `ARGUS_GITHUB_TOKEN` to a personal access token (`repo` scope is enough for private PR search). Presence of the token opts in.
 2. **Env flag + gh:** set `ARGUS_GITHUB_ENABLED=1` (or `true`) and authenticate with `gh auth login`. Argus prefers `gh api` when `gh` is available.
@@ -87,19 +115,23 @@ Then use authenticated `gh`, or set `ARGUS_GITHUB_TOKEN`. The settings path is d
 
 ## UI
 
-- **Today** — KPI strip, By tool, Activity, Shipping (real or unconfigured)
-- **Insights** — 3–5 deterministic findings with evidence + Context panel
-- **Shipping** — merged PRs, commits, files touched for the selected period
-- **Settings** — how to opt in to GitHub; Share Off reminder
+- **Today** - KPI strip, By tool, Activity, Shipping (real or unconfigured)
+- **Insights** - 3-5 deterministic findings with evidence + Context panel
+- **Shipping** - merged PRs, commits, files touched for the selected period
+- **Settings** - how to opt in to GitHub; Share Off reminder
 - Stub nav: Activity / Tools / Share
 
 ### Terminal UI (`argus-local tui`)
 
-Same data path as HTML (adapters → SQLite → rollups/insights). Renders whole screens in the terminal with keyboard nav — not a JSON dump. Built with **ratatui + crossterm**.
+Same data path as HTML (adapters → SQLite → rollups/insights). Renders whole screens in the terminal with keyboard nav - not a JSON dump. Built with **ratatui + crossterm**.
 
 ## Out of scope (this ticket / v1)
 
-Linear adapter, Jira, org Share bridge, inventing shipping when GitHub isn’t configured, real Codex adapter, native GUI, Node sidecar, Docker.
+Linear adapter, Jira, org Share bridge, inventing shipping when GitHub isn't configured, real Codex adapter, native GUI, Node sidecar, Docker. macOS/Linux release zips, code signing, auto-update, and MSI installer are also out of scope for ARG-33.
+
+## Publishing a Windows Release
+
+See [docs/RELEASE.md](docs/RELEASE.md) and `scripts/package-windows-release.ps1`. Packaging is local; `gh release create` is a separate, approved step.
 
 ## License
 
@@ -107,4 +139,4 @@ MIT
 
 ## Proof screenshots
 
-See `proof/` for HTML + TUI Shipping screens (configured + unconfigured) attached on Linear ARG-32.
+See `proof/` for HTML + TUI Shipping screens (configured + unconfigured) attached on Linear ARG-32. ARG-33 portable exe packaging proof: `proof/arg-33/` (binaries gitignored).
