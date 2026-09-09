@@ -266,18 +266,21 @@ fn parse_cursor_blob(key: &str, value: &str) -> Option<SessionRecord> {
         blake_short(&format!("{key}:{created_ms}:{input}:{output}"))
     );
 
+    // Never invent token counts — unknown stays unknown (UI shows —).
+    let tokens_known = input + output > 0;
     Some(SessionRecord {
         id,
         tool: "Cursor".into(),
         model,
         started_at: started,
         ended_at: ended,
-        input_tokens: if input > 0 { input } else { 50_000 },
-        output_tokens: if output > 0 { output } else { 10_000 },
+        input_tokens: if tokens_known { input } else { 0 },
+        output_tokens: if tokens_known { output } else { 0 },
+        tokens_known,
         tools_proposed: proposed,
         tools_accepted: accepted,
         source: "cursor".into(),
-        cost_complete: input + output > 0,
+        cost_complete: tokens_known,
     })
 }
 

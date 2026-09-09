@@ -1,4 +1,4 @@
-﻿//! argus-local — one-process local HTML MVP (Claude Code + Cursor).
+//! argus-local - one-process local HTML MVP (Claude Code + Cursor + Grok).
 mod adapters;
 mod db;
 mod fixtures;
@@ -70,28 +70,18 @@ fn load_store(force_fixtures: bool) -> Result<SessionStore> {
         let scan = scan_all()?;
         let mut sessions = scan.sessions;
         let mut statuses = scan.statuses;
-        // If Claude+Cursor produced nothing useful, fall back to fixtures so UI always demos
+        // Real local adapters only (claude / cursor / grok). No stub Codex etc.
         let real = sessions
             .iter()
-            .filter(|s| s.source == "claude" || s.source == "cursor")
+            .filter(|s| s.source == "claude" || s.source == "cursor" || s.source == "grok")
             .count();
         if real == 0 {
-            eprintln!("argus-local: no Claude/Cursor sessions found — loading fixture demo data");
+            eprintln!("argus-local: no local adapter sessions found - loading fixture demo data");
             used_fixtures = true;
             sessions = fixtures::fixture_sessions();
             statuses = fixtures::fixture_statuses();
-        } else {
-            // Merge fixture Codex/Grok only if stubs empty — fixtures already cover demo shape when real=0
-            // Keep real sessions; ensure Grok partial badge present
-            if !statuses.iter().any(|s| s.name == "partial") {
-                statuses.push(AdapterStatus {
-                    name: "partial".into(),
-                    ok: false,
-                    partial: true,
-                    detail: "some adapters incomplete".into(),
-                });
-            }
         }
+        // Only tools with discovered sessions appear in statuses (see scan_all).
         (sessions, statuses)
     };
 
@@ -129,8 +119,8 @@ fn main() -> Result<()> {
         } => {
             let store = load_store(fixtures)?;
             if json {
-                let today = rollups::rollup(&store.sessions, days, store.statuses.clone());
-                let insights = insights::build_insights(&store.sessions, days, store.statuses.clone());
+                let today = rollups::rollup(&store.sessions, days, store.statuses.clone(), store.used_fixtures);
+                let insights = insights::build_insights(&store.sessions, days, store.statuses.clone(), store.used_fixtures);
                 let out = serde_json::json!({
                     "today": today,
                     "insights": insights,

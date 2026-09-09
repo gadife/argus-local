@@ -1,11 +1,11 @@
-﻿//! Period rollups + rough estimate pricing (NOT an invoice).
+//! Period rollups + rough estimate pricing (NOT an invoice).
 use crate::models::{
     ActivityRow, AdapterStatus, LanguageLock, PeriodRollup, SessionRecord, ShippingStub, ToolRollup,
 };
 use chrono::{Duration, Utc};
 use std::collections::{HashMap, HashSet};
 
-/// Rough public list-price heuristics — labeled estimate only.
+/// Rough public list-price heuristics - labeled estimate only.
 pub fn estimate_spend_usd(model: &str, input: i64, output: i64) -> f64 {
     let m = model.to_lowercase();
     let (in_per_m, out_per_m) = if m.contains("opus") {
@@ -30,6 +30,7 @@ pub fn rollup(
     sessions: &[SessionRecord],
     period_days: u32,
     adapter_status: Vec<AdapterStatus>,
+    used_fixtures: bool,
 ) -> PeriodRollup {
     let since = Utc::now() - Duration::days(period_days as i64);
     let filtered: Vec<&SessionRecord> = sessions
@@ -39,10 +40,11 @@ pub fn rollup(
 
     let sessions_n = filtered.len() as i64;
     let tokens: i64 = filtered.iter().map(|s| s.total_tokens()).sum();
+    let any_tokens_known = filtered.iter().any(|s| s.tokens_known);
     let est_spend: f64 = filtered
         .iter()
         .map(|s| {
-            if s.cost_complete {
+            if s.cost_complete && s.tokens_known {
                 estimate_spend_usd(&s.model, s.input_tokens, s.output_tokens)
             } else {
                 0.0
@@ -63,26 +65,33 @@ pub fn rollup(
         models.insert(s.model.clone());
     }
 
-    let mut by_tool_map: HashMap<String, (i64, i64, bool)> = HashMap::new();
+    // tool -> (tokens, sessions, incomplete, tokens_known)
+    let mut by_tool_map: HashMap<String, (i64, i64, bool, bool)> = HashMap::new();
     for s in &filtered {
         let e = by_tool_map
             .entry(s.tool.clone())
-            .or_insert((0, 0, false));
+            .or_insert((0, 0, false, false));
         e.0 += s.total_tokens();
         e.1 += 1;
         if !s.cost_complete {
             e.2 = true;
         }
+        if s.tokens_known {
+            e.3 = true;
+        }
     }
 
     let mut by_tool: Vec<ToolRollup> = by_tool_map
         .into_iter()
-        .map(|(tool, (tok, sess, incomplete))| ToolRollup {
+        .map(|(tool, (tok, sess, incomplete, known))| ToolRollup {
             tool,
             tokens: tok,
+            tokens_known: known,
             sessions: sess,
             cost_incomplete: incomplete,
-            share_pct: if tokens > 0 {
+            share_pct: if tokens > 0 && known {
+                (tok as f64 / tokens as f64) * 100.0
+            } else if tokens > 0 {
                 (tok as f64 / tokens as f64) * 100.0
             } else {
                 0.0
@@ -98,11 +107,12 @@ pub fn rollup(
             let start = s.started_at.format("%H:%M").to_string();
             let end = s.ended_at.format("%H:%M").to_string();
             ActivityRow {
-                time_range: format!("{start} – {end}"),
+                time_range: format!("{start} - {end}"),
                 tool: s.tool.clone(),
                 model: s.model.clone(),
                 tokens: s.total_tokens(),
-                est_spend_usd: if s.cost_complete {
+                tokens_known: s.tokens_known,
+                est_spend_usd: if s.cost_complete && s.tokens_known {
                     estimate_spend_usd(&s.model, s.input_tokens, s.output_tokens)
                 } else {
                     0.0
@@ -110,25 +120,27 @@ pub fn rollup(
             }
         })
         .collect();
-    // Already ordered by started_at DESC from DB; keep as-is
 
     PeriodRollup {
         period_days,
         sessions: sessions_n,
         tokens,
+        tokens_known: any_tokens_known,
         est_spend_usd: est_spend,
         tool_accept_pct,
         models_unique: models.len() as i64,
         by_tool,
         activity,
         shipping: ShippingStub {
-            merged_prs: 3,
-            commits: 11,
-            files_touched: 28,
+            is_stub: true,
+            merged_prs: None,
+            commits: None,
+            files_touched: None,
             note: LanguageLock::default().shipping_note,
         },
         adapter_status,
         language_lock: LanguageLock::default(),
+        used_fixtures,
     }
 }
 
@@ -141,4 +153,3 @@ pub fn format_tokens(n: i64) -> String {
         n.to_string()
     }
 }
-

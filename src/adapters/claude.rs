@@ -91,6 +91,7 @@ struct SessionAcc {
 
 impl SessionAcc {
     fn into_record(self, id: String) -> SessionRecord {
+        let tokens_known = self.input + self.output > 0;
         SessionRecord {
             id: format!("claude:{id}"),
             tool: "Claude Code".into(),
@@ -103,10 +104,11 @@ impl SessionAcc {
             ended_at: self.ended,
             input_tokens: self.input,
             output_tokens: self.output,
+            tokens_known,
             tools_proposed: self.proposed,
             tools_accepted: self.accepted,
             source: "claude".into(),
-            cost_complete: true,
+            cost_complete: tokens_known,
         }
     }
 }

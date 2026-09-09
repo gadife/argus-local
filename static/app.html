@@ -25,7 +25,7 @@
 .sidebar-foot{margin-top:auto;padding:12px;border:1px solid var(--border);border-radius:var(--radius);background:var(--card2)}
 .share-row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
 .pill{background:#222;border:1px solid var(--border);border-radius:999px;padding:2px 8px;font-size:11px;color:var(--text)}
-.toggle{width:36px;height:20px;border-radius:999px;background:#333;position:relative;border:1px solid var(--border)}
+.toggle{width:36px;height:20px;border-radius:999px;background:#333;position:relative;border:1px solid var(--border);cursor:default}
 .toggle::after{content:"";position:absolute;width:14px;height:14px;border-radius:50%;background:#fff;top:2px;left:2px}
 .toggle.off::after{left:2px}
 .main{flex:1;display:flex;flex-direction:column;min-width:0}
@@ -36,6 +36,8 @@
 .seg button{background:transparent;border:none;color:var(--muted);padding:6px 14px;cursor:pointer;font-size:13px}
 .seg button.on{color:var(--green);box-shadow:inset 0 0 0 1px var(--green);border-radius:999px}
 .lock{font-size:12px;color:var(--dim)}
+.banner{display:none;margin:0 28px 12px;padding:10px 14px;border-radius:var(--radius);border:1px solid rgba(245,158,11,0.45);background:var(--orange-dim);color:#FBBF24;font-size:13px;font-weight:500}
+.banner.show{display:block}
 .status{display:flex;gap:8px;flex-wrap:wrap;padding:0 28px 16px}
 .badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);background:var(--card);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--muted)}
 .dot{width:7px;height:7px;border-radius:50%;background:var(--green)}
@@ -47,7 +49,7 @@
 .kpi .val{font-size:28px;font-weight:650;letter-spacing:-.02em}
 .kpi .sub{color:var(--dim);font-size:12px;margin-top:4px}
 .section-title{font-size:13px;color:var(--muted);margin:6px 0 10px;font-weight:600}
-.bytool{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:18px}
+.bytool{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:18px}
 .toolcard{position:relative;overflow:hidden}
 .toolcard .name{display:flex;align-items:center;gap:8px;font-weight:600;margin-bottom:8px}
 .toolcard .tok{font-size:14px}
@@ -65,6 +67,7 @@
 .ship-list li{display:flex;justify-content:space-between;color:var(--muted);font-size:13px}
 .ship-list strong{color:var(--text)}
 .ship-note{margin-top:14px;font-size:11px;color:var(--dim);border-top:1px solid var(--border);padding-top:10px}
+.stub-tag{display:inline-block;margin-left:6px;font-size:10px;color:var(--orange);border:1px solid rgba(245,158,11,0.4);border-radius:999px;padding:1px 6px;vertical-align:middle}
 .footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 28px;border-top:1px solid var(--border);font-size:12px;color:var(--dim)}
 .footer-left{display:flex;align-items:center;gap:10px}
 .insights-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px}
@@ -90,25 +93,25 @@
       Argus Local
     </div>
     <nav class="nav" id="nav">
-      <button data-page="today" class="active">◎ Today</button>
-      <button data-page="activity">☰ Activity</button>
-      <button data-page="tools">⚒ Tools</button>
-      <button data-page="insights">✦ Insights</button>
-      <button data-page="shipping">⇪ Shipping</button>
-      <button data-page="share">⤴ Share</button>
-      <button data-page="settings">⚙ Settings</button>
+      <button data-page="today" class="active">Today</button>
+      <button data-page="activity">Activity</button>
+      <button data-page="tools">Tools</button>
+      <button data-page="insights">Insights</button>
+      <button data-page="shipping">Shipping</button>
+      <button data-page="share">Share</button>
+      <button data-page="settings">Settings</button>
     </nav>
     <div class="sidebar-foot">
       <div class="share-row">
         <span>Share to org <span class="pill">Argus</span></span>
-        <div class="toggle off" title="Off"></div>
+        <div class="toggle off" id="shareToggle" title="Off"></div>
       </div>
       <div style="margin-top:6px;font-size:11px;color:var(--dim)">Off</div>
     </div>
   </aside>
   <div class="main">
     <div class="top">
-      <h1 class="h1" id="title">Today · Last 7 days</h1>
+      <h1 class="h1" id="title">Today — Last 7 days</h1>
     </div>
     <div class="controls">
       <div class="seg" id="period">
@@ -116,64 +119,79 @@
         <button data-d="7" class="on">7d</button>
         <button data-d="30">30d</button>
       </div>
-      <span class="lock" id="lockLine">Local only · estimates ≠ invoice</span>
+      <span class="lock" id="lockLine">Local only — estimates ≠ invoice</span>
     </div>
+    <div class="banner" id="fixtureBanner">Demo fixtures — not live adapter data. Label shown so this is never silent fake-as-real.</div>
     <div class="status" id="status"></div>
     <div class="content" id="content"></div>
     <div class="footer">
       <div class="footer-left">
-        <span>⤴ Share to org</span>
-        <span class="pill">Argus</span>
-        <span>·</span>
-        <span>Off</span>
-        <div class="toggle off"></div>
+        <span>aggregates only — no raw prompts or code — local-first</span>
       </div>
-      <div>🛡 aggregates only · no raw prompts or code · local-first</div>
+      <div id="footerRight"></div>
     </div>
   </div>
 </div>
 <script>
 let DATA=null, PAGE=(new URLSearchParams(location.search).get('page')||location.hash.replace('#','')||'today').toLowerCase(), DAYS=Number(new URLSearchParams(location.search).get('days')||7)||7;
 const $=s=>document.querySelector(s);
-function fmtTok(n){if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return String(n)}
+function fmtTok(n){if(n==null||n===undefined)return '—'; if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return String(n)}
+function fmtTokKnown(n, known){return known ? fmtTok(n) : '—'}
 function fmtUsd(n){return '$'+Math.round(n)}
+function fmtUsdKnown(n, known){return known ? fmtUsd(n) : '—'}
+function syncFixtureBanner(){
+  const on=!!(DATA&&DATA.used_fixtures);
+  $('#fixtureBanner').classList.toggle('show', on);
+}
 async function load(){
   const r=await fetch('/api/dashboard?days='+DAYS);
   DATA=await r.json();
   render();
 }
 function statusHtml(st){
-  return (st||[]).map(s=>{
+  // Only real adapter names with discovered data — never invent Codex/etc stubs
+  return (st||[]).filter(s=>s && s.name && s.name!=='partial').map(s=>{
     const warn=s.partial||!s.ok;
-    return `<span class="badge"><span class="dot ${warn?'warn':''}"></span>${s.name}</span>`;
+    return `<span class="badge"><span class="dot ${warn?'warn':''}"></span>${esc(s.name)}</span>`;
   }).join('');
+}
+function shipVal(ship, key){
+  if(!ship||ship.is_stub) return '—';
+  const v=ship[key];
+  return (v==null) ? '—' : String(v);
 }
 function renderToday(){
   const d=DATA.today;
-  $('#title').textContent=`Today · Last ${DAYS} days`;
+  $('#title').textContent=`Today — Last ${DAYS} days`;
   $('#lockLine').textContent=d.language_lock.estimates_note;
   $('#status').innerHTML=statusHtml(d.adapter_status);
+  syncFixtureBanner();
   const accept=d.tool_accept_pct==null?'—':(Math.round(d.tool_accept_pct)+'%');
   const tools=d.by_tool.map(t=>{
-    const warn=t.cost_incomplete?`<div class="warn-tag">⚠ cost incomplete</div>`:'';
+    const warn=t.cost_incomplete?`<div class="warn-tag">cost incomplete</div>`:'';
+    const tokLabel=t.tokens_known?`${fmtTok(t.tokens)} tokens`:`— tokens`;
+    const barW=t.tokens_known?Math.max(6,t.share_pct):0;
     return `<div class="card toolcard">
       <div class="name">${esc(t.tool)}</div>
-      <div class="tok">${fmtTok(t.tokens)} tokens</div>
+      <div class="tok">${tokLabel}</div>
       <div class="sess">${t.sessions} sessions</div>
       ${warn}
-      <div class="bar"><i class="${t.cost_incomplete?'warn':''}" style="width:${Math.max(6,t.share_pct)}%"></i></div>
+      <div class="bar"><i class="${t.cost_incomplete?'warn':''}" style="width:${barW}%"></i></div>
     </div>`;
   }).join('');
   const rows=d.activity.map(a=>`<tr>
     <td>${esc(a.time_range)}</td><td>${esc(a.tool)}</td><td>${esc(a.model)}</td>
-    <td>${fmtTok(a.tokens)} tokens</td><td>${fmtUsd(a.est_spend_usd)}</td></tr>`).join('');
+    <td>${fmtTokKnown(a.tokens,a.tokens_known)} tokens</td>
+    <td>${a.tokens_known?fmtUsd(a.est_spend_usd):'—'}</td></tr>`).join('');
+  const ship=d.shipping||{};
+  const stubTag=ship.is_stub?'<span class="stub-tag">stub</span>':'';
   $('#content').innerHTML=`
     <div class="kpis">
-      <div class="card kpi"><div class="label">◎ Sessions</div><div class="val">${d.sessions}</div><div class="sub">Completed sessions</div></div>
-      <div class="card kpi"><div class="label">▤ Tokens</div><div class="val">${fmtTok(d.tokens)}</div><div class="sub">Total estimated tokens</div></div>
-      <div class="card kpi"><div class="label">$ Est. spend</div><div class="val">${fmtUsd(d.est_spend_usd)}</div><div class="sub">estimate</div></div>
-      <div class="card kpi"><div class="label">✓ Tool accept</div><div class="val">${accept}</div><div class="sub">Accepted / proposed</div></div>
-      <div class="card kpi"><div class="label">◻ Models</div><div class="val">${d.models_unique}</div><div class="sub">Unique models used</div></div>
+      <div class="card kpi"><div class="label">Sessions</div><div class="val">${d.sessions}</div><div class="sub">Completed sessions</div></div>
+      <div class="card kpi"><div class="label">Tokens</div><div class="val">${fmtTokKnown(d.tokens,d.tokens_known)}</div><div class="sub">${d.tokens_known?'Total estimated tokens':'Unknown — no token data'}</div></div>
+      <div class="card kpi"><div class="label">$ Est. spend</div><div class="val">${d.tokens_known?fmtUsd(d.est_spend_usd):'—'}</div><div class="sub">estimate</div></div>
+      <div class="card kpi"><div class="label">Tool accept</div><div class="val">${accept}</div><div class="sub">Accepted / proposed</div></div>
+      <div class="card kpi"><div class="label">Models</div><div class="val">${d.models_unique}</div><div class="sub">Unique models used</div></div>
     </div>
     <div class="section-title">By tool</div>
     <div class="bytool">${tools}</div>
@@ -184,29 +202,34 @@ function renderToday(){
         <tbody>${rows||'<tr><td colspan="5" style="color:var(--dim)">No activity in period</td></tr>'}</tbody></table>
       </div>
       <div class="card">
-        <div class="section-title" style="margin-top:0">⇪ Shipping (opt-in GitHub)</div>
+        <div class="section-title" style="margin-top:0">Shipping (opt-in GitHub)${stubTag}</div>
         <ul class="ship-list">
-          <li><span>Merged PRs</span><strong>${d.shipping.merged_prs}</strong></li>
-          <li><span>Commits</span><strong>${d.shipping.commits}</strong></li>
-          <li><span>Files touched</span><strong>${d.shipping.files_touched}</strong></li>
+          <li><span>Merged PRs</span><strong>${shipVal(ship,'merged_prs')}</strong></li>
+          <li><span>Commits</span><strong>${shipVal(ship,'commits')}</strong></li>
+          <li><span>Files touched</span><strong>${shipVal(ship,'files_touched')}</strong></li>
         </ul>
-        <div class="ship-note">${esc(d.shipping.note)}</div>
+        <div class="ship-note">${esc(ship.note||'Stub / opt-in GitHub placeholder — not observed shipping data.')}</div>
       </div>
     </div>`;
 }
 function renderInsights(){
   const d=DATA.insights; const c=d.context;
-  $('#title').textContent=`Insights · Last ${DAYS} days`;
+  $('#title').textContent=`Insights — Last ${DAYS} days`;
   $('#lockLine').textContent=d.language_lock.observations_note;
   $('#status').innerHTML=statusHtml(c.adapter_status);
+  syncFixtureBanner();
   const findings=d.findings.map(f=>`<div class="card finding">
     <h3>${esc(f.title)}</h3>
     <div class="sum">${esc(f.summary)}</div>
     <div class="ev">${esc(f.evidence)}</div>
   </div>`).join('');
-  const bars=(c.by_tool||[]).map(t=>`<div class="barline"><span style="width:90px">${esc(t.tool)}</span>
-    <div class="track"><i style="width:${Math.max(4,t.share_pct)}%"></i></div>
-    <span>${fmtTok(t.tokens)}</span></div>`).join('');
+  const bars=(c.by_tool||[]).map(t=>{
+    const tok=t.tokens_known?fmtTok(t.tokens):'—';
+    const w=t.tokens_known?Math.max(4,t.share_pct):0;
+    return `<div class="barline"><span style="width:90px">${esc(t.tool)}</span>
+    <div class="track"><i style="width:${w}%"></i></div>
+    <span>${tok}</span></div>`;
+  }).join('');
   const accept=c.tool_accept_pct==null?'—':(Math.round(c.tool_accept_pct)+'%');
   $('#content').innerHTML=`
     <div class="insights-grid">
@@ -214,19 +237,20 @@ function renderInsights(){
       <div class="card ctx">
         <div class="section-title" style="margin-top:0">Context</div>
         <div class="row"><span>Sessions</span><strong>${c.sessions}</strong></div>
-        <div class="row"><span>Tokens</span><strong>${fmtTok(c.tokens)}</strong></div>
-        <div class="row"><span>Est. spend</span><strong>${fmtUsd(c.est_spend_usd)} <span style="color:var(--dim);font-weight:400">estimate</span></strong></div>
+        <div class="row"><span>Tokens</span><strong>${fmtTokKnown(c.tokens,c.tokens_known)}</strong></div>
+        <div class="row"><span>Est. spend</span><strong>${c.tokens_known?fmtUsd(c.est_spend_usd)+' <span style="color:var(--dim);font-weight:400">estimate</span>':'—'}</strong></div>
         <div class="row"><span>Tool accept</span><strong>${accept}</strong></div>
         <div class="bars"><div class="section-title">By tool</div>${bars}</div>
-        <div class="ctx-note">Not ranked vs peers · not a productivity score</div>
+        <div class="ctx-note">Not ranked vs peers — not a productivity score</div>
       </div>
     </div>`;
 }
 function renderStub(name){
-  $('#title').textContent=name+' · stub';
-  $('#lockLine').textContent='Local only · observations, not a score';
+  $('#title').textContent=name+' — stub';
+  $('#lockLine').textContent='Local only — observations, not a score';
+  syncFixtureBanner();
   $('#content').innerHTML=`<div class="card"><p style="color:var(--muted);margin:0">${esc(name)} is a navigation stub in v1. Today + Insights are live.</p>
-  <p style="color:var(--dim);font-size:12px">aggregates only · no raw prompts or code · local-first</p></div>`;
+  <p style="color:var(--dim);font-size:12px">aggregates only — no raw prompts or code — local-first</p></div>`;
 }
 function render(){
   if(!DATA)return;
@@ -243,9 +267,10 @@ $('#nav').addEventListener('click',e=>{
 $('#period').addEventListener('click',e=>{
   const b=e.target.closest('button'); if(!b)return;
   [...$('#period').querySelectorAll('button')].forEach(x=>x.classList.toggle('on',x===b));
-  DAYS=Number(b.dataset.d); [...document.querySelectorAll('#nav button')].forEach(x=>x.classList.toggle('active', x.dataset.page===PAGE));
-[...document.querySelectorAll('#period button')].forEach(x=>x.classList.toggle('on', Number(x.dataset.d)===DAYS));
-load();
+  DAYS=Number(b.dataset.d);
+  [...document.querySelectorAll('#nav button')].forEach(x=>x.classList.toggle('active', x.dataset.page===PAGE));
+  [...document.querySelectorAll('#period button')].forEach(x=>x.classList.toggle('on', Number(x.dataset.d)===DAYS));
+  load();
 });
 [...document.querySelectorAll('#nav button')].forEach(x=>x.classList.toggle('active', x.dataset.page===PAGE));
 [...document.querySelectorAll('#period button')].forEach(x=>x.classList.toggle('on', Number(x.dataset.d)===DAYS));

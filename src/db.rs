@@ -1,4 +1,4 @@
-﻿//! SQLite index for session records.
+//! SQLite index for session records.
 use crate::models::SessionRecord;
 use anyhow::{Context, Result};
 use rusqlite::{params, Connection};
@@ -27,9 +27,11 @@ impl Index {
     }
 
     fn migrate(&self) -> Result<()> {
+        // Local cache rebuilt each open — drop to pick up schema changes cheaply.
         self.conn.execute_batch(
             r#"
-            CREATE TABLE IF NOT EXISTS sessions (
+            DROP TABLE IF EXISTS sessions;
+            CREATE TABLE sessions (
                 id TEXT PRIMARY KEY,
                 tool TEXT NOT NULL,
                 model TEXT NOT NULL,
@@ -37,6 +39,7 @@ impl Index {
                 ended_at TEXT NOT NULL,
                 input_tokens INTEGER NOT NULL,
                 output_tokens INTEGER NOT NULL,
+                tokens_known INTEGER NOT NULL,
                 tools_proposed INTEGER NOT NULL,
                 tools_accepted INTEGER NOT NULL,
                 source TEXT NOT NULL,
@@ -61,9 +64,10 @@ impl Index {
                 r#"
                 INSERT INTO sessions (
                     id, tool, model, started_at, ended_at,
-                    input_tokens, output_tokens, tools_proposed, tools_accepted,
+                    input_tokens, output_tokens, tokens_known,
+                    tools_proposed, tools_accepted,
                     source, cost_complete
-                ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11)
+                ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)
                 ON CONFLICT(id) DO UPDATE SET
                     tool=excluded.tool,
                     model=excluded.model,
@@ -71,6 +75,7 @@ impl Index {
                     ended_at=excluded.ended_at,
                     input_tokens=excluded.input_tokens,
                     output_tokens=excluded.output_tokens,
+                    tokens_known=excluded.tokens_known,
                     tools_proposed=excluded.tools_proposed,
                     tools_accepted=excluded.tools_accepted,
                     source=excluded.source,
@@ -86,6 +91,7 @@ impl Index {
                     r.ended_at.to_rfc3339(),
                     r.input_tokens,
                     r.output_tokens,
+                    if r.tokens_known { 1 } else { 0 },
                     r.tools_proposed,
                     r.tools_accepted,
                     r.source,
@@ -101,7 +107,8 @@ impl Index {
         let mut stmt = self.conn.prepare(
             r#"
             SELECT id, tool, model, started_at, ended_at,
-                   input_tokens, output_tokens, tools_proposed, tools_accepted,
+                   input_tokens, output_tokens, tokens_known,
+                   tools_proposed, tools_accepted,
                    source, cost_complete
             FROM sessions
             WHERE started_at >= ?1
@@ -123,10 +130,11 @@ impl Index {
                     .unwrap_or_else(|_| chrono::Utc::now()),
                 input_tokens: row.get(5)?,
                 output_tokens: row.get(6)?,
-                tools_proposed: row.get(7)?,
-                tools_accepted: row.get(8)?,
-                source: row.get(9)?,
-                cost_complete: row.get::<_, i64>(10)? != 0,
+                tokens_known: row.get::<_, i64>(7)? != 0,
+                tools_proposed: row.get(8)?,
+                tools_accepted: row.get(9)?,
+                source: row.get(10)?,
+                cost_complete: row.get::<_, i64>(11)? != 0,
             })
         })?;
         let mut out = Vec::new();
