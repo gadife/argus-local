@@ -1,0 +1,40 @@
+ Argus Local                                                                                        
+  Today  │  Activity  │  Tools  │  Insights  │  Shipping  │  Share  │  Settings                     
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Insights  7d   Local only — observations, not a score                                               
+ adapters  Grok · partial     Share · Off                                                           
+                                                                                                    
+┌ findings · observations, not a score ──────────────────────┐┌ context ───────────────────────────┐
+│i Tool accept stayed high                                   ││1  sessions                         │
+│100% accept — 1 sessions                                    ││21.2K  tokens                       │
+│why this showed: 4/4 proposed tools accepted                ││$0  est. spend                      │
+│                                                            ││100%  tool accept                   │
+│! Grok cost incomplete                                      ││                                    │
+│signals lack billable I/O — treat $ as unknown              ││by tool                             │
+│why this showed: 21.2K tokens, no I/O data                  ││Grok      ██████████████ 21.2K      │
+│                                                            ││                                    │
+│! Shipping is a stub placeholder                            ││not ranked vs peers — not a         │
+│Opt-in GitHub shipping is not connected — no observed       ││productivity score                  │
+│PR/commit counts                                            ││                                    │
+│why this showed: shipping adapter is stub/opt-in only       ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+└────────────────────────────────────────────────────────────┘└────────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  │  tab/hl pages · d period · 1 today · 4 ins
