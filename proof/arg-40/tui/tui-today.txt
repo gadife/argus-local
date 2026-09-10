@@ -1,0 +1,90 @@
+ Argus Local                                                                                        
+  Today  │  Activity  │  Tools  │  Insights  │  Shipping  │  Share  │  Settings                     
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Today  90d   Local only — estimates ≠ invoice                                                       
+ adapters  Grok · partial     Share · Off                                                           
+                                                                                                    
+42                 │6.7M               │$0                 │100%               │2                  │
+sessions           │tokens             │est. spend         │tool accept        │models             │
+completed          │estimated          │estimate ≠ invoice │accepted / proposed│unique             │
+                   │                   │                   │                   │                   │
+┌ by tool ─────────────────────────────────────────────────────────────────────────────────────────┐
+│found on device only                                                                              │
+│ Grok         6.7M   42s  ██████████████████  100%  cost incomplete                               │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌ activity ─────────────────────────────────────────────────────┐┌ shipping · unconfigured ────────┐
+│time          tool       model              tokens     est.    ││merged prs      —                │
+│21:42 - 21:43 Grok       grok-4.6           7.0K       —       ││commits        —                 │
+│21:30 - 21:33 Grok       grok-4.6           38.9K      —       ││files touched  —                 │
+│20:29 - 20:31 Grok       grok-4.6           21.2K      —       ││                                 │
+│21:46 - 20:26 Grok       grok-4.6           219.6K     —       ││GitHub shipping not configured — │
+│21:02 - 20:26 Grok       grok-4.6           146.5K     —       ││enable github.enabled in         │
+│19:55 - 20:26 Grok       grok-4.6           167.0K     —       ││C:\Users\Gadi\AppData\Local\argus│
+│01:26 - 10:39 Grok       grok-4.6           255.9K     —       ││-local\settings.json or set      │
+│00:34 - 02:08 Grok       grok-4.6           74.6K      —       ││ARGUS_GITHUB_TOKEN /             │
+│00:22 - 05:30 Grok       grok-4.6           35.0K      —       ││ARGUS_GITHUB_ENABLED (uses gh    │
+│23:44 - 01:26 Grok       grok-4.6           256.1K     —       ││when authenticated). No observed │
+│15:58 - 16:00 Grok       grok-4.6           26.9K      —       ││PR/commit counts.                │
+│19:44 - 15:58 Grok       grok-4.6           190.5K     —       ││                                 │
+│17:16 - 19:44 Grok       grok-4.6           227.4K     —       ││                                 │
+│21:26 - 16:56 Grok       grok-4.6           134.2K     —       ││                                 │
+│18:35 - 21:21 Grok       grok-4.6           237.3K     —       ││                                 │
+│19:33 - 18:35 Grok       grok-4.6           151.6K     —       ││                                 │
+│21:39 - 19:32 Grok       grok-4.6           109.5K     —       ││                                 │
+│17:32 - 19:28 Grok       grok-4.6           71.8K      —       ││                                 │
+│10:38 - 21:38 Grok       grok-4.6           384.8K     —       ││                                 │
+│10:30 - 10:37 Grok       grok-4.6           22.1K      —       ││                                 │
+│01:57 - 10:37 Grok       grok-4.6           276.6K     —       ││                                 │
+│20:27 - 10:37 Grok       grok-4.6           287.3K     —       ││                                 │
+│13:30 - 10:37 Grok       grok-4.6           326.1K     —       ││                                 │
+│19:47 - 10:37 Grok       grok-4.6           166.8K     —       ││                                 │
+│15:54 - 10:37 Grok       grok-4.6           303.8K     —       ││                                 │
+│20:53 - 20:56 Grok       grok-4.6           66.0K      —       ││                                 │
+│20:53 - 20:55 Grok       grok-4.6           55.2K      —       ││                                 │
+│18:48 - 10:37 Grok       grok-4.6           277.6K     —       ││                                 │
+│13:58 - 10:37 Grok       grok-4.6           274.9K     —       ││                                 │
+│13:48 - 10:37 Grok       grok-4.6           27.6K      —       ││                                 │
+│12:54 - 10:37 Grok       grok-4.6           159.2K     —       ││                                 │
+│15:50 - 10:37 Grok       grok-4.6           215.5K     —       ││                                 │
+│14:46 - 10:37 Grok       grok-4.5           264.6K     —       ││                                 │
+│15:05 - 21:01 Grok       grok-4.5           104.1K     —       ││                                 │
+│15:02 - 15:05 Grok       grok-4.5           21.5K      —       ││                                 │
+│14:55 - 15:01 Grok       grok-4.5           54.0K      —       ││                                 │
+│13:26 - 14:53 Grok       grok-4.5           233.9K     —       ││                                 │
+│12:57 - 13:26 Grok       grok-4.5           150.2K     —       ││                                 │
+│12:48 - 12:57 Grok       grok-4.5           45.2K      —       ││                                 │
+│02:58 - 12:44 Grok       grok-4.5           228.0K     —       ││                                 │
+│02:09 - 02:57 Grok       grok-4.5           192.3K     —       ││                                 │
+│19:21 - 10:37 Grok       grok-4.5           204.8K     —       ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+│                                                               ││                                 │
+└───────────────────────────────────────────────────────────────┘└─────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  │  tab/hl pages · d period · 1 today · 4 ins

@@ -107,6 +107,10 @@
 .gate{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50}
 .gate .card{max-width:420px;margin:20px}
 
+.coach-row{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0 4px}
+.coach-chip{border:1px solid var(--border);border-radius:999px;padding:4px 10px;font-size:12px;background:rgba(255,255,255,.03)}
+.coach-chip .ck{color:var(--dim);margin-right:6px}
+.coach-note{color:var(--dim);font-size:11px;margin:4px 0 0}
 </style>
 </head>
 <body>
@@ -363,6 +367,34 @@ function sectionBlock(title, rows){
   if(!items.length) return '';
   return `<div class="tel-sec"><div class="section-title">${esc(title)}</div><div class="detail-grid">${items.map(([k,v])=>`<div><div class="k">${esc(k)}</div><div class="v">${v}</div></div>`).join('')}</div></div>`;
 }
+
+function coachingSection(c){
+  if(!c) return '';
+  const chips=[];
+  if(c.tool_failure_count!=null){
+    const denom=c.tool_call_count!=null?(' / ' + fmtNum(c.tool_call_count) + ' calls'):'';
+    chips.push(['Tool failures', fmtNum(c.tool_failure_count) + denom]);
+  }
+  if(c.identical_tool_streak!=null && c.identical_tool_name){
+    chips.push(['Identical run', '' + esc(c.identical_tool_name) + ' x ' + fmtNum(c.identical_tool_streak)]);
+  }
+  if(c.explore_count!=null || c.act_count!=null){
+    chips.push(['Explore vs act', (fmtNum(c.explore_count)||0) + ' explore · ' + (fmtNum(c.act_count)||0) + ' act']);
+  }
+  if(c.checks_after_edits!=null && c.edits_count!=null){
+    const w=c.checks_window!=null?c.checks_window:5;
+    chips.push(['Checks after edits', fmtNum(c.checks_after_edits) + ' of ' + fmtNum(c.edits_count) + ' within ' + w]);
+  }
+  if(c.subagent_spawn_count!=null || c.subagent_dir_count!=null){
+    const parts=[];
+    if(c.subagent_spawn_count!=null) parts.push(fmtNum(c.subagent_spawn_count) + ' spawned');
+    if(c.subagent_dir_count!=null) parts.push(fmtNum(c.subagent_dir_count) + ' dirs');
+    chips.push(['Subagents', parts.join(' · ')]);
+  }
+  if(!chips.length) return '';
+  const row=chips.map(([k,v])=>'<span class="coach-chip"><span class="ck">'+esc(k)+'</span> '+v+'</span>').join('');
+  return '<div class="tel-sec"><div class="section-title">Coaching</div><div class="coach-row">'+row+'</div><p class="coach-note">observations, not a score · Share Off · no prompts</p></div>';
+}
 function sessionDetailHtml(a, detail){
   if(!a) return '<p style="color:var(--dim);margin:0">Select a session for aggregates (no prompts or code).</p>';
   if(!detail){
@@ -413,6 +445,7 @@ function sessionDetailHtml(a, detail){
     ['Source', esc(a.source||a.tool)],
     ['Session id', `<span style="font-weight:500;font-size:12px;word-break:break-all">${esc(a.id)}</span>`],
   ]);
+  const coach=coachingSection(detail.coaching);
   let promptsBlock='';
   if(PROMPTS_ENABLED){
     const p=detail.prompt_text, r=detail.response_text;
@@ -425,7 +458,7 @@ function sessionDetailHtml(a, detail){
       promptsBlock+='<div class="detail-note" style="margin-top:10px">Local only \u2014 never uploaded \u2014 Share Off</div></div>';
     }
   } else {
-    promptsBlock='<p class="detail-note">aggregates only \u2014 no raw prompts or code \u2014 local-first \u00b7 estimates \u2260 invoice \u00b7 Share Off</p>';
+    promptsBlock='<p class="detail-note">aggregates only \u2014 no raw prompts or code \u2014 local-first \u00b7 estimates \u2260 invoice \u00b7 Share Off \u00b7 observations, not a score</p>';
   }
   return `${sum}${ctx}${io}${cache}${sig}${promptsBlock}`;
 }

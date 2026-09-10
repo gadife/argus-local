@@ -157,11 +157,57 @@ pub struct SessionTelemetry {
     pub cost_note: Option<String>,
 }
 
-/// GET /api/session/:id payload — activity + telemetry + opt-in prompts (ARG-37/38).
+/// Grok-first coaching observations (ARG-40). All Option — hide when absent.
+/// Observations only — never a composite score / peer rank / health %.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SessionCoachingObs {
+    /// From signals.toolFailureCount (or errorCount / events errors when failure absent).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_failure_count: Option<i64>,
+    /// tool_completed.outcome=error count when events present.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_error_from_events: Option<i64>,
+    /// Denominator when known (signals.toolCallCount or completed events).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_call_count: Option<i64>,
+
+    /// Longest consecutive identical tool_started name (when streak >= 3).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub identical_tool_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub identical_tool_streak: Option<i64>,
+
+    /// Explore-ish vs act-ish tool_started counts.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub explore_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub act_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub other_tool_count: Option<i64>,
+
+    /// Write/edit tools followed by read/grep/terminal within checks_window steps.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub checks_after_edits: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub edits_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub checks_window: Option<i64>,
+
+    /// spawn_subagent tool_started count.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subagent_spawn_count: Option<i64>,
+    /// Count of directories under session/subagents/.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub subagent_dir_count: Option<i64>,
+}
+
+/// GET /api/session/:id payload - activity + telemetry + coaching + opt-in prompts (ARG-37/38/40).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionDetail {
     pub activity: ActivityRow,
     pub telemetry: SessionTelemetry,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub coaching: Option<SessionCoachingObs>,
     pub language_lock: LanguageLock,
     pub prompts_enabled: bool,
     /// Present only when prompts_enabled and adapter file had the field.

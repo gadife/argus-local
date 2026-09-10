@@ -1,0 +1,90 @@
+ Argus Local                                                                                        
+  Today  │  Activity  │  Tools  │  Insights  │  Shipping  │  Share  │  Settings                     
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Insights  90d   Local only — observations, not a score                                              
+ adapters  Grok · partial     Share · Off                                                           
+                                                                                                    
+┌ findings · observations, not a score ──────────────────────┐┌ context ───────────────────────────┐
+│i Tool failures observed                                    ││42  sessions                        │
+│108 tool failure(s) out of 6384 tool calls across 33        ││6.7M  tokens                        │
+│session(s)                                                  ││$0  est. spend                      │
+│why this showed: signals.toolFailureCount / events          ││100%  tool accept                   │
+│tool_completed.outcome=error                                ││                                    │
+│                                                            ││by tool                             │
+│i Long identical tool run                                   ││Grok      ██████████████ 6.7M       │
+│`search_replace` ran 44 times in a row                      ││                                    │
+│why this showed: consecutive tool_started events in         ││not ranked vs peers — not a         │
+│grok:01a00091-276c-7522-8128-24b299712650                   ││productivity score                  │
+│                                                            ││                                    │
+│i Tool accept stayed high                                   ││                                    │
+│100% accept — 42 sessions                                   ││                                    │
+│why this showed: 6580/6580 proposed tools accepted          ││                                    │
+│                                                            ││                                    │
+│i Shipping not configured                                   ││                                    │
+│Opt-in GitHub shipping is off — no observed PR/commit counts││                                    │
+│why this showed: GitHub adapter not opted in (Settings /    ││                                    │
+│ARGUS_GITHUB_TOKEN / ARGUS_GITHUB_ENABLED)                  ││                                    │
+│                                                            ││                                    │
+│i grok-4.6 dominated long sessions                          ││                                    │
+│25 sessions >1h used grok-4.6                               ││                                    │
+│why this showed: 25 sessions over 60 mins                   ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+│                                                            ││                                    │
+└────────────────────────────────────────────────────────────┘└────────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  │  tab/hl pages · d period · 1 today · 4 ins

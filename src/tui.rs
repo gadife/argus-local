@@ -1,6 +1,6 @@
 //! Terminal UI — full screens via ratatui (same engine as HTML).
 use crate::insights::build_insights;
-use crate::adapters::load_session_telemetry;
+use crate::adapters::{coaching_has_any, load_session_coaching, load_session_telemetry};
 use crate::models::{InsightsPayload, LanguageLock, PeriodRollup, SessionRecord, SessionTelemetry};
 use crate::rollups::{ShippingContext, format_tokens, rollup};
 use crate::SessionStore;
@@ -419,30 +419,70 @@ pub fn write_proof_screens(store: SessionStore, days: u32, dir: &Path) -> Result
     std::fs::create_dir_all(dir)?;
     let mut app = App::new(store, days);
     let width = 100u16;
-    let height = 60u16;
+    let height = 90u16;
     let mut out_paths = Vec::new();
 
     for (page, name) in [(Page::Today, "tui-today"), (Page::Activity, "tui-activity"), (Page::Insights, "tui-insights"), (Page::Shipping, "tui-shipping"), (Page::Settings, "tui-settings")] {
         app.page = page;
         if page == Page::Activity {
-            // Prefer ARG-37 fixture, else live Grok telemetry session, else incomplete row.
-            let idx = app
-                .today
-                .activity
-                .iter()
-                .position(|a| a.id == crate::adapters::FIXTURE_PROMPTS_ID)
-                .or_else(|| {
-                    app.today
-                        .activity
-                        .iter()
-                        .position(|a| a.id.contains("01a0881e-e77a-78e3-a262-6cdb294be825"))
-                })
-                .or_else(|| {
-                    app.today
-                        .activity
-                        .iter()
-                        .position(|a| !a.cost_complete)
-                });
+            // Prefer richest ARG-40 coaching session; else ARG-37 fixture / live Grok; else incomplete.
+            let idx = {
+                let scored: Vec<(usize, i64)> = app
+                    .today
+                    .activity
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, a)| {
+                        let c = load_session_coaching(&a.id).ok()?;
+                        if !coaching_has_any(&c) {
+                            return None;
+                        }
+                        let mut score = 0i64;
+                        if c.tool_failure_count.is_some() {
+                            score += 4;
+                        }
+                        if c.identical_tool_streak.is_some() {
+                            score += 4;
+                        }
+                        if c.explore_count.is_some() {
+                            score += 1;
+                        }
+                        if c.checks_after_edits.is_some() {
+                            score += 2;
+                        }
+                        if c.subagent_spawn_count.is_some() || c.subagent_dir_count.is_some() {
+                            score += 4;
+                        }
+                        Some((i, score))
+                    })
+                    .collect();
+                scored
+                    .into_iter()
+                    .max_by_key(|(_, s)| *s)
+                    .map(|(i, _)| i)
+                    .or_else(|| {
+                        app.today
+                            .activity
+                            .iter()
+                            .position(|a| a.id == crate::adapters::FIXTURE_PROMPTS_ID)
+                    })
+                    .or_else(|| {
+                        app.today.activity.iter().position(|a| {
+                            a.id.contains("01a0881e-e77a-78e3-a262-6cdb294be825")
+                        })
+                    })
+                    .or_else(|| {
+                        app.today.activity.iter().position(|a| {
+                            a.id.starts_with("grok:")
+                                && load_session_telemetry(&a.id)
+                                    .ok()
+                                    .and_then(|t| t.tool_call_count)
+                                    .unwrap_or(0)
+                                    > 0
+                        })
+                    })
+                    .or_else(|| app.today.activity.iter().position(|a| !a.cost_complete))
+            };
             if let Some(i) = idx {
                 app.activity_idx = i;
                 app.activity_detail = true;
@@ -820,7 +860,18 @@ fn finding_tint(title: &str) -> Style {
     let t = title.to_lowercase();
     if t.contains("incomplete") || t.contains("stub") || t.contains("unknown") {
         warn().add_modifier(Modifier::BOLD)
-    } else if t.contains("accept") || t.contains("took more") || t.contains("dominated") {
+    } else if t.contains("failure")
+        || t.contains("identical")
+        || t.contains("few checks")
+    {
+        warn().add_modifier(Modifier::BOLD)
+    } else if t.contains("accept")
+        || t.contains("took more")
+        || t.contains("dominated")
+        || t.contains("explore")
+        || t.contains("subagent")
+        || t.contains("checks after")
+    {
         info().add_modifier(Modifier::BOLD)
     } else {
         accent().add_modifier(Modifier::BOLD)
@@ -1203,6 +1254,51 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
             } else {
                 push_kv(&mut lines, "tools prop.", a.tools_proposed.to_string());
                 push_kv(&mut lines, "tools accept", a.tools_accepted.to_string());
+            }
+
+            // Coaching observations (ARG-40) — hide when absent
+            let coach = load_session_coaching(&a.id).unwrap_or_default();
+            if coaching_has_any(&coach) {
+                push_sec(&mut lines, "Coaching");
+                if let Some(n) = coach.tool_failure_count {
+                    let denom = coach
+                        .tool_call_count
+                        .map(|c| format!(" / {c} calls"))
+                        .unwrap_or_default();
+                    push_kv(&mut lines, "failures", format!("{n}{denom}"));
+                }
+                if let (Some(ref name), Some(streak)) =
+                    (&coach.identical_tool_name, coach.identical_tool_streak)
+                {
+                    push_kv(&mut lines, "identical", format!("`{name}` x{streak}"));
+                }
+                if coach.explore_count.is_some() || coach.act_count.is_some() {
+                    push_kv(
+                        &mut lines,
+                        "explore/act",
+                        format!(
+                            "{} explore / {} act",
+                            coach.explore_count.unwrap_or(0),
+                            coach.act_count.unwrap_or(0)
+                        ),
+                    );
+                }
+                if let (Some(c), Some(e)) = (coach.checks_after_edits, coach.edits_count) {
+                    let w = coach.checks_window.unwrap_or(5);
+                    push_kv(&mut lines, "checks", format!("{c} of {e} within {w}"));
+                }
+                match (coach.subagent_spawn_count, coach.subagent_dir_count) {
+                    (Some(s), Some(d)) => {
+                        push_kv(&mut lines, "subagents", format!("{s} spawned / {d} dirs"))
+                    }
+                    (Some(s), None) => push_kv(&mut lines, "subagents", format!("{s} spawned")),
+                    (None, Some(d)) => push_kv(&mut lines, "subagents", format!("{d} dirs")),
+                    (None, None) => {}
+                }
+                lines.push(Line::from(Span::styled(
+                    "observations, not a score",
+                    dim(),
+                )));
             }
 
             if !a.adapter_note.is_empty() {
