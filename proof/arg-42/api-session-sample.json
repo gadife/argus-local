@@ -1,0 +1,45 @@
+{
+  "id": "grok:01a0019a-9a67-7612-bd80-9097733cf82d",
+  "tool": "Grok",
+  "coaching": {
+    "tool_failure_count": 15,
+    "tool_error_from_events": 21,
+    "tool_call_count": 671,
+    "identical_tool_name": "search_replace",
+    "identical_tool_streak": 22,
+    "explore_count": 197,
+    "act_count": 346,
+    "other_tool_count": 127,
+    "checks_after_edits": 254,
+    "edits_count": 256,
+    "checks_window": 5,
+    "subagent_spawn_count": 2,
+    "subagent_dir_count": 2
+  },
+  "coach_dimensions": [
+    {
+      "id": "verification_habit",
+      "title": "Verification habit",
+      "label": "observed",
+      "tip": "Checks followed 254 of 256 edits - keep verifying after writes before the next change."
+    },
+    {
+      "id": "tool_thrash",
+      "title": "Tool thrash / loops",
+      "label": "watch",
+      "tip": "`search_replace` repeated x22 - tighten the ask or change approach instead of retrying the same call."
+    },
+    {
+      "id": "explore_act_balance",
+      "title": "Explore/act balance",
+      "label": "observed",
+      "tip": "Mixed explore/act (197 explore / 346 act) - keep alternating look-then-change."
+    },
+    {
+      "id": "delegation",
+      "title": "Delegation",
+      "label": "observed",
+      "tip": "Subagents were used (2 spawned) - keep scope narrow so the parent stays the source of truth."
+    }
+  ]
+}

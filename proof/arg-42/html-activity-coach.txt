@@ -1,0 +1,82 @@
+Summary
+Title
+Check Current Branch Commit Push Status
+cwd
+C:\argus
+Model
+grok-4.6
+Source
+grok
+Session id
+grok:01a0019a-9a67-7612-bd80-9097733cf82d
+Context
+Context used / window
+277,561 / 500,000 (55.5%)
+Note
+Context = window fill (not billable in/out). Billable I/O from turn usage when present.
+Billable I/O
+Input tokens
+61,044,664
+Output tokens
+180,497
+Total tokens
+61,225,161
+Reasoning tokens
+138,107
+Model calls
+305
+API duration
+3,468,248 ms
+Est. spend
+$103 estimate ≠ invoice
+Cache
+Cached read tokens
+58,729,472
+Cache creation tokens
+0
+Signals
+Turns
+17
+Tool calls
+671
+Tools used
+run_terminal_command, list_dir, read_file, web_fetch, web_search, grep, get_command_or_subagent_output, search_tool, use_tool, todo_write, search_replace, spawn_subagent
+Avg TTFT
+10784 ms
+Avg response
+17072 ms
+Session duration
+29,464 s
+Coaching
+Tool failures 15 / 671 calls
+Identical run `search_replace` x 22
+Explore vs act 197 explore / 346 act
+Checks after edits 254 of 256 within 5
+Subagents 2 spawned / 2 dirs
+
+observations, not a score · Share Off · no prompts
+
+Coach
+Verification habit
+observed
+
+Checks followed 254 of 256 edits - keep verifying after writes before the next change.
+
+Tool thrash / loops
+watch
+
+`search_replace` repeated x22 - tighten the ask or change approach instead of retrying the same call.
+
+Explore/act balance
+observed
+
+Mixed explore/act (197 explore / 346 act) - keep alternating look-then-change.
+
+Delegation
+observed
+
+Subagents were used (2 spawned) - keep scope narrow so the parent stays the source of truth.
+
+coach, don’t rank · no score · Share Off
+
+aggregates only — no raw prompts or code — local-first · estimates ≠ invoice · Share Off · observations, not a score

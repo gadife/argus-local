@@ -111,6 +111,15 @@
 .coach-chip{border:1px solid var(--border);border-radius:999px;padding:4px 10px;font-size:12px;background:rgba(255,255,255,.03)}
 .coach-chip .ck{color:var(--dim);margin-right:6px}
 .coach-note{color:var(--dim);font-size:11px;margin:4px 0 0}
+.coach-dims{display:flex;flex-direction:column;gap:10px;margin:10px 0 4px}
+.coach-dim{border:1px solid var(--border);border-radius:10px;padding:10px 12px;background:rgba(255,255,255,.02)}
+.coach-dim-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.coach-dim-title{font-size:13px;font-weight:600}
+.coach-label{font-size:11px;border-radius:999px;padding:2px 8px;border:1px solid var(--border);text-transform:lowercase}
+.coach-label.observed{color:#4ADE80;border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.08)}
+.coach-label.watch{color:#FBBF24;border-color:rgba(251,191,36,.35);background:rgba(251,191,36,.08)}
+.coach-label.thin{color:#F87171;border-color:rgba(248,113,113,.35);background:rgba(248,113,113,.08)}
+.coach-tip{color:var(--muted);font-size:12px;line-height:1.45;margin:0}
 </style>
 </head>
 <body>
@@ -376,10 +385,10 @@ function coachingSection(c){
     chips.push(['Tool failures', fmtNum(c.tool_failure_count) + denom]);
   }
   if(c.identical_tool_streak!=null && c.identical_tool_name){
-    chips.push(['Identical run', '' + esc(c.identical_tool_name) + ' x ' + fmtNum(c.identical_tool_streak)]);
+    chips.push(['Identical run', `\`${esc(c.identical_tool_name)}\` x ${fmtNum(c.identical_tool_streak)}`]);
   }
   if(c.explore_count!=null || c.act_count!=null){
-    chips.push(['Explore vs act', (fmtNum(c.explore_count)||0) + ' explore · ' + (fmtNum(c.act_count)||0) + ' act']);
+    chips.push(['Explore vs act', `${fmtNum(c.explore_count)||0} explore / ${fmtNum(c.act_count)||0} act`]);
   }
   if(c.checks_after_edits!=null && c.edits_count!=null){
     const w=c.checks_window!=null?c.checks_window:5;
@@ -387,13 +396,21 @@ function coachingSection(c){
   }
   if(c.subagent_spawn_count!=null || c.subagent_dir_count!=null){
     const parts=[];
-    if(c.subagent_spawn_count!=null) parts.push(fmtNum(c.subagent_spawn_count) + ' spawned');
-    if(c.subagent_dir_count!=null) parts.push(fmtNum(c.subagent_dir_count) + ' dirs');
-    chips.push(['Subagents', parts.join(' · ')]);
+    if(c.subagent_spawn_count!=null) parts.push(`${fmtNum(c.subagent_spawn_count)} spawned`);
+    if(c.subagent_dir_count!=null) parts.push(`${fmtNum(c.subagent_dir_count)} dirs`);
+    chips.push(['Subagents', parts.join(' / ')]);
   }
   if(!chips.length) return '';
-  const row=chips.map(([k,v])=>'<span class="coach-chip"><span class="ck">'+esc(k)+'</span> '+v+'</span>').join('');
-  return '<div class="tel-sec"><div class="section-title">Coaching</div><div class="coach-row">'+row+'</div><p class="coach-note">observations, not a score · Share Off · no prompts</p></div>';
+  const row=chips.map(([k,v])=>`<span class="coach-chip"><span class="ck">${esc(k)}</span> ${v}</span>`).join('');
+  return `<div class="tel-sec"><div class="section-title">Coaching</div><div class="coach-row">${row}</div><p class="coach-note">observations, not a score \u00b7 Share Off \u00b7 no prompts</p></div>`;
+}
+function coachDimensionsSection(dims){
+  if(!dims || !dims.length) return '';
+  const rows=dims.map(d=>{
+    const lab=(d.label||'').toLowerCase();
+    return `<div class="coach-dim"><div class="coach-dim-top"><span class="coach-dim-title">${esc(d.title||d.id)}</span><span class="coach-label ${esc(lab)}">${esc(lab)}</span></div><p class="coach-tip">${esc(d.tip||'')}</p></div>`;
+  }).join('');
+  return `<div class="tel-sec"><div class="section-title">Coach</div><div class="coach-dims">${rows}</div><p class="coach-note">coach, don\u2019t rank \u00b7 no score \u00b7 Share Off</p></div>`;
 }
 function sessionDetailHtml(a, detail){
   if(!a) return '<p style="color:var(--dim);margin:0">Select a session for aggregates (no prompts or code).</p>';
@@ -446,6 +463,7 @@ function sessionDetailHtml(a, detail){
     ['Session id', `<span style="font-weight:500;font-size:12px;word-break:break-all">${esc(a.id)}</span>`],
   ]);
   const coach=coachingSection(detail.coaching);
+  const coachDims=coachDimensionsSection(detail.coach_dimensions);
   let promptsBlock='';
   if(PROMPTS_ENABLED){
     const p=detail.prompt_text, r=detail.response_text;

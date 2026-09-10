@@ -12,7 +12,7 @@ pub use cursor::scan_cursor;
 pub use github::{is_opted_in, scan_github, settings_path_display, snapshot_for_period};
 pub use grok::scan_grok;
 pub use prompts::{load_session_texts, SessionTexts, FIXTURE_PROMPTS_ID};
-pub use coaching::{coaching_has_any, load_session_coaching};
+pub use coaching::{coach_dimensions, coaching_has_any, load_session_coaching};
 pub use telemetry::load_session_telemetry;
 
 use crate::models::{AdapterStatus, SessionRecord, ShippingEvent};
