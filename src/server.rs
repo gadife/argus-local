@@ -1,5 +1,5 @@
-﻿//! Localhost HTTP server with embedded HTML.
-use crate::adapters::{load_session_texts, load_session_telemetry, SessionTexts};
+//! Localhost HTTP server with embedded HTML.
+use crate::adapters::{coaching_has_any, load_session_coaching, load_session_texts, load_session_telemetry, SessionTexts};
 use crate::insights::build_insights;
 use crate::models::{AdapterStatus, LanguageLock, SessionDetail, SessionTelemetry};
 use crate::rollups::{activity_row_for, rollup, ShippingContext};
@@ -190,9 +190,17 @@ fn build_session_detail(
         prompts_missing = prompt_text.is_none() && response_text.is_none();
     }
 
+    let coaching_raw = load_session_coaching(id).unwrap_or_default();
+    let coaching = if coaching_has_any(&coaching_raw) {
+        Some(coaching_raw)
+    } else {
+        None
+    };
+
     Some(SessionDetail {
         activity,
         telemetry,
+        coaching,
         language_lock: LanguageLock::default(),
         prompts_enabled: prompts_on,
         prompt_text,

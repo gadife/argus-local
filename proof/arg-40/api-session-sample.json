@@ -1,0 +1,22 @@
+﻿{
+    "id":  "grok:01a0019a-9a67-7612-bd80-9097733cf82d",
+    "tool":  "Grok",
+    "coaching":  {
+                     "tool_failure_count":  15,
+                     "tool_error_from_events":  21,
+                     "tool_call_count":  671,
+                     "identical_tool_name":  "search_replace",
+                     "identical_tool_streak":  22,
+                     "explore_count":  197,
+                     "act_count":  346,
+                     "other_tool_count":  127,
+                     "checks_after_edits":  254,
+                     "edits_count":  256,
+                     "checks_window":  5,
+                     "subagent_spawn_count":  2,
+                     "subagent_dir_count":  2
+                 },
+    "telemetry_tool_call_count":  671,
+    "telemetry_turn_count":  17,
+    "has_prompts":  false
+}

@@ -1,5 +1,5 @@
 //! Deterministic insights - observations with evidence, never grades.
-use crate::adapters::load_session_telemetry;
+use crate::adapters::{load_session_coaching, load_session_telemetry};
 use crate::models::{Finding, InsightsPayload, LanguageLock, SessionRecord};
 use crate::rollups::{estimate_spend_usd, rollup, ShippingContext};
 use chrono::{Duration, Utc};
@@ -172,6 +172,9 @@ pub fn build_insights(
         }
     }
 
+    // 6) ARG-40 coaching observations (Grok-first) — titles are coaching tags, not a score.
+    push_coaching_findings(&mut findings, sessions, since);
+
     findings.truncate(5);
     while findings.len() < 3 {
         findings.push(Finding {
@@ -211,6 +214,158 @@ fn period_has_grok_turn_io(sessions: &[SessionRecord], since: chrono::DateTime<U
             Err(_) => false,
         })
 }
+
+fn push_coaching_findings(
+    findings: &mut Vec<Finding>,
+    sessions: &[SessionRecord],
+    since: chrono::DateTime<Utc>,
+) {
+    let mut best_streak: Option<(String, i64, String)> = None; // name, streak, session id
+    let mut fail_sessions = 0i64;
+    let mut fail_total = 0i64;
+    let mut fail_calls = 0i64;
+    let mut explore = 0i64;
+    let mut act = 0i64;
+    let mut checks = 0i64;
+    let mut edits = 0i64;
+    let mut subagent_spawns = 0i64;
+    let mut subagent_dirs = 0i64;
+    let mut coaching_sessions = 0i64;
+
+    for s in sessions.iter().filter(|s| s.source == "grok" && s.started_at >= since) {
+        let Ok(obs) = load_session_coaching(&s.id) else {
+            continue;
+        };
+        let mut any = false;
+        if let Some(n) = obs.tool_failure_count {
+            if n > 0 {
+                fail_sessions += 1;
+                fail_total += n;
+                fail_calls += obs.tool_call_count.unwrap_or(0);
+                any = true;
+            }
+        }
+        if let (Some(name), Some(streak)) = (&obs.identical_tool_name, obs.identical_tool_streak) {
+            any = true;
+            let better = match &best_streak {
+                None => true,
+                Some((_, prev, _)) => streak > *prev,
+            };
+            if better {
+                best_streak = Some((name.clone(), streak, s.id.clone()));
+            }
+        }
+        if let (Some(e), Some(a)) = (obs.explore_count, obs.act_count) {
+            explore += e;
+            act += a;
+            any = true;
+        }
+        if let (Some(c), Some(ed)) = (obs.checks_after_edits, obs.edits_count) {
+            checks += c;
+            edits += ed;
+            any = true;
+        }
+        if let Some(n) = obs.subagent_spawn_count {
+            subagent_spawns += n;
+            any = true;
+        }
+        if let Some(n) = obs.subagent_dir_count {
+            subagent_dirs += n;
+            any = true;
+        }
+        if any {
+            coaching_sessions += 1;
+        }
+    }
+
+    if coaching_sessions == 0 {
+        return;
+    }
+
+    // Prefer actionable coaching titles (max a few; truncate later handles cap).
+    if let Some((name, streak, sid)) = best_streak {
+        if streak >= 8 {
+            findings.insert(
+                0,
+                Finding {
+                    title: "Long identical tool run".into(),
+                    summary: format!("`{name}` ran {streak} times in a row"),
+                    evidence: format!(
+                        "why this showed: consecutive tool_started events in {sid}"
+                    ),
+                },
+            );
+        } else if streak >= 3 {
+            findings.insert(
+                0,
+                Finding {
+                    title: "Identical tool run".into(),
+                    summary: format!("`{name}` ran {streak} times in a row"),
+                    evidence: format!(
+                        "why this showed: consecutive tool_started events in {sid}"
+                    ),
+                },
+            );
+        }
+    }
+
+    if fail_total > 0 {
+        let denom = if fail_calls > 0 {
+            format!(" out of {fail_calls} tool calls")
+        } else {
+            String::new()
+        };
+        findings.insert(
+            0,
+            Finding {
+                title: "Tool failures observed".into(),
+                summary: format!(
+                    "{fail_total} tool failure(s){denom} across {fail_sessions} session(s)"
+                ),
+                evidence: "why this showed: signals.toolFailureCount / events tool_completed.outcome=error"
+                    .into(),
+            },
+        );
+    }
+
+    if edits > 0 {
+        let rate = (checks as f64) * 100.0 / (edits as f64);
+        let title = if rate < 50.0 {
+            "Few checks after edits"
+        } else {
+            "Checks after edits"
+        };
+        findings.push(Finding {
+            title: title.into(),
+            summary: format!("{checks} of {edits} write-like calls followed by read/grep/terminal within 5 steps"),
+            evidence: "why this showed: tool_started sequences (write/replace then explore/terminal)".into(),
+        });
+    }
+
+    if explore + act > 0 {
+        findings.push(Finding {
+            title: "Explore vs act mix".into(),
+            summary: format!("{explore} explore-ish vs {act} act-ish tool starts"),
+            evidence: "why this showed: classified tool_started names (read/grep/list vs write/replace/terminal)".into(),
+        });
+    }
+
+    if subagent_spawns > 0 || subagent_dirs > 0 {
+        let mut parts = Vec::new();
+        if subagent_spawns > 0 {
+            parts.push(format!("{subagent_spawns} spawn_subagent"));
+        }
+        if subagent_dirs > 0 {
+            parts.push(format!("{subagent_dirs} subagent dir(s)"));
+        }
+        findings.push(Finding {
+            title: "Subagents used".into(),
+            summary: parts.join(" · "),
+            evidence: "why this showed: spawn_subagent tool_started and/or session/subagents/ dirs".into(),
+        });
+    }
+}
+
 
 fn short_model(m: &str) -> String {
     if m.contains("Opus") {
