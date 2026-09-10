@@ -201,13 +201,44 @@ pub struct SessionCoachingObs {
     pub subagent_dir_count: Option<i64>,
 }
 
-/// GET /api/session/:id payload - activity + telemetry + coaching + opt-in prompts (ARG-37/38/40).
+/// Coach verdict label (ARG-42). Not a score - observed / watch / thin only.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum CoachLabel {
+    Observed,
+    Watch,
+    Thin,
+}
+
+impl CoachLabel {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            CoachLabel::Observed => "observed",
+            CoachLabel::Watch => "watch",
+            CoachLabel::Thin => "thin",
+        }
+    }
+}
+
+/// One coach dimension: label + tip. No numeric score / peer rank.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CoachDimension {
+    pub id: String,
+    pub title: String,
+    pub label: CoachLabel,
+    pub tip: String,
+}
+
+/// GET /api/session/:id payload - activity + telemetry + coaching + coach dimensions + opt-in prompts (ARG-37/38/40/42).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionDetail {
     pub activity: ActivityRow,
     pub telemetry: SessionTelemetry,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub coaching: Option<SessionCoachingObs>,
+    /// ARG-42 coach dimensions - omit when empty (hide missing).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub coach_dimensions: Vec<CoachDimension>,
     pub language_lock: LanguageLock,
     pub prompts_enabled: bool,
     /// Present only when prompts_enabled and adapter file had the field.

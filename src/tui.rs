@@ -1,6 +1,6 @@
 //! Terminal UI — full screens via ratatui (same engine as HTML).
 use crate::insights::build_insights;
-use crate::adapters::{coaching_has_any, load_session_coaching, load_session_telemetry};
+use crate::adapters::{coach_dimensions, coaching_has_any, load_session_coaching, load_session_telemetry};
 use crate::models::{InsightsPayload, LanguageLock, PeriodRollup, SessionRecord, SessionTelemetry};
 use crate::rollups::{ShippingContext, format_tokens, rollup};
 use crate::SessionStore;
@@ -1297,6 +1297,30 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
                 }
                 lines.push(Line::from(Span::styled(
                     "observations, not a score",
+                    dim(),
+                )));
+            }
+
+            // Coach dimensions (ARG-42) — hide when empty
+            let dims = coach_dimensions(&coach);
+            if !dims.is_empty() {
+                push_sec(&mut lines, "Coach");
+                for d in &dims {
+                    lines.push(Line::from(vec![
+                        Span::styled(format!("{:<18}", d.title), Style::default().fg(Color::White)),
+                        Span::styled(
+                            format!("[{}]", d.label.as_str()),
+                            match d.label {
+                                crate::models::CoachLabel::Observed => Style::default().fg(Color::Green),
+                                crate::models::CoachLabel::Watch => Style::default().fg(Color::Yellow),
+                                crate::models::CoachLabel::Thin => Style::default().fg(Color::Red),
+                            },
+                        ),
+                    ]));
+                    lines.push(Line::from(Span::styled(format!("  {}", d.tip), dim())));
+                }
+                lines.push(Line::from(Span::styled(
+                    "coach, don't rank - no score",
                     dim(),
                 )));
             }

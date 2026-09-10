@@ -1,9 +1,9 @@
-//! Grok-first v1 coaching observations (ARG-40).
+//! Grok-first v1 coaching observations (ARG-40) + coach dimensions (ARG-42).
 //! Deterministic heuristics from signals.json + events.jsonl.
 //! Never reads auth.json, prompt_context.json, system_prompt, rawOutput, or prompt bodies.
-//! Observations only — not a score. Hide missing (Option / omit zeros that aren't informative).
+//! Observations / coach labels only - not a score. Hide missing.
 use super::grok::grok_roots;
-use crate::models::SessionCoachingObs;
+use crate::models::{CoachDimension, CoachLabel, SessionCoachingObs};
 use anyhow::Result;
 use serde_json::Value;
 use std::fs;
@@ -55,7 +55,7 @@ fn find_grok_session_dir(uuid: &str) -> Option<PathBuf> {
 }
 
 fn fill_from_session_dir(obs: &mut SessionCoachingObs, dir: &Path) {
-    // --- signals.json numeric fields (failures) ---
+    // - signals.json numeric fields (failures) -
     let signals_path = dir.join("signals.json");
     if signals_path.exists() {
         if let Ok(raw) = fs::read_to_string(&signals_path) {
@@ -76,7 +76,7 @@ fn fill_from_session_dir(obs: &mut SessionCoachingObs, dir: &Path) {
         }
     }
 
-    // --- events.jsonl: starts + completed outcomes (names/outcomes only) ---
+    // - events.jsonl: starts + completed outcomes (names/outcomes only) -
     let events_path = dir.join("events.jsonl");
     let mut starts: Vec<String> = Vec::new();
     let mut event_errors: i64 = 0;
@@ -296,4 +296,203 @@ pub fn coaching_has_any(obs: &SessionCoachingObs) -> bool {
         || obs.checks_after_edits.is_some()
         || obs.subagent_spawn_count.is_some()
         || obs.subagent_dir_count.is_some()
+}
+
+/// ARG-42: deterministic coach dimensions from ARG-40 observations.
+/// Coach, don't rank - labels + tip only. Hide missing. No composite score.
+pub fn coach_dimensions(obs: &SessionCoachingObs) -> Vec<CoachDimension> {
+    let mut out = Vec::with_capacity(4);
+
+    // 1. Verification habit - hide if edits=0 / absent
+    if let (Some(checks), Some(edits)) = (obs.checks_after_edits, obs.edits_count) {
+        if edits > 0 {
+            let ratio = checks as f64 / edits as f64;
+            let (label, tip) = if ratio >= 0.7 {
+                (
+                    CoachLabel::Observed,
+                    format!(
+                        "Checks followed {checks} of {edits} edits - keep verifying after writes before the next change."
+                    ),
+                )
+            } else if ratio >= 0.3 {
+                (
+                    CoachLabel::Watch,
+                    format!(
+                        "Checks after only {checks} of {edits} edits - after a write, run a quick read or test before the next change."
+                    ),
+                )
+            } else {
+                (
+                    CoachLabel::Thin,
+                    format!(
+                        "Few checks after edits ({checks} of {edits}) - after a write, run a quick read or test before the next change."
+                    ),
+                )
+            };
+            out.push(CoachDimension {
+                id: "verification_habit".into(),
+                title: "Verification habit".into(),
+                label,
+                tip,
+            });
+        }
+    }
+
+    // 2. Tool thrash / loops - watch if streak-8 or fail rate-5%; observed if streak-3; hide if both zero
+    {
+        let streak = obs.identical_tool_streak.unwrap_or(0);
+        let fails = obs.tool_failure_count.unwrap_or(0);
+        let calls = obs.tool_call_count.unwrap_or(0);
+        let fail_rate = if calls > 0 {
+            fails as f64 / calls as f64
+        } else {
+            0.0
+        };
+        let both_zero = streak == 0 && fails == 0;
+        if !both_zero {
+            if streak >= 8 || fail_rate >= 0.05 {
+                let tip = if streak >= 8 {
+                    let name = obs
+                        .identical_tool_name
+                        .as_deref()
+                        .unwrap_or("tool");
+                    format!(
+                        "`{name}` repeated x{streak} - tighten the ask or change approach instead of retrying the same call."
+                    )
+                } else {
+                    format!(
+                        "Tool failures are high ({fails} / {calls} calls) - pause, inspect the error, and change approach before another retry."
+                    )
+                };
+                out.push(CoachDimension {
+                    id: "tool_thrash".into(),
+                    title: "Tool thrash / loops".into(),
+                    label: CoachLabel::Watch,
+                    tip,
+                });
+            } else if streak >= 3 {
+                let name = obs
+                    .identical_tool_name
+                    .as_deref()
+                    .unwrap_or("tool");
+                out.push(CoachDimension {
+                    id: "tool_thrash".into(),
+                    title: "Tool thrash / loops".into(),
+                    label: CoachLabel::Observed,
+                    tip: format!(
+                        "Identical `{name}` streak x{streak} noted - watch for loops; vary the approach if it repeats."
+                    ),
+                });
+            }
+            // else: failures present but rate <5% and streak <3 - hide (not informative)
+        }
+    }
+
+    // 3. Explore/act balance - hide if both 0 / absent
+    {
+        let explore = obs.explore_count.unwrap_or(0);
+        let act = obs.act_count.unwrap_or(0);
+        let total = explore + act;
+        if total > 0 {
+            let act_share = act as f64 / total as f64;
+            let explore_share = explore as f64 / total as f64;
+            let (label, tip) = if act_share >= 0.75 {
+                (
+                    CoachLabel::Watch,
+                    format!(
+                        "Act-heavy ({act} act / {explore} explore) - skim the file or search before another edit."
+                    ),
+                )
+            } else if explore_share >= 0.75 {
+                (
+                    CoachLabel::Watch,
+                    format!(
+                        "Explore-heavy ({explore} explore / {act} act) - after enough context, make a small decisive change."
+                    ),
+                )
+            } else {
+                (
+                    CoachLabel::Observed,
+                    format!(
+                        "Mixed explore/act ({explore} explore / {act} act) - keep alternating look-then-change."
+                    ),
+                )
+            };
+            out.push(CoachDimension {
+                id: "explore_act_balance".into(),
+                title: "Explore/act balance".into(),
+                label,
+                tip,
+            });
+        }
+    }
+
+    // 4. Delegation - spawns-1 observed; dirs without spawns watch; hide if absent
+    match (obs.subagent_spawn_count, obs.subagent_dir_count) {
+        (Some(spawns), _) if spawns >= 1 => {
+            out.push(CoachDimension {
+                id: "delegation".into(),
+                title: "Delegation".into(),
+                label: CoachLabel::Observed,
+                tip: format!(
+                    "Subagents were used ({spawns} spawned) - keep scope narrow so the parent stays the source of truth."
+                ),
+            });
+        }
+        (None, Some(dirs)) if dirs > 0 => {
+            out.push(CoachDimension {
+                id: "delegation".into(),
+                title: "Delegation".into(),
+                label: CoachLabel::Watch,
+                tip: format!(
+                    "{dirs} subagent dir(s) without spawn_subagent starts - confirm delegation is intentional and scoped."
+                ),
+            });
+        }
+        _ => {}
+    }
+
+    out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn verification_thresholds() {
+        let mut obs = SessionCoachingObs::default();
+        obs.checks_after_edits = Some(8);
+        obs.edits_count = Some(10);
+        let d = coach_dimensions(&obs);
+        assert_eq!(d[0].id, "verification_habit");
+        assert_eq!(d[0].label, CoachLabel::Observed);
+
+        obs.checks_after_edits = Some(4);
+        let d = coach_dimensions(&obs);
+        assert_eq!(d[0].label, CoachLabel::Watch);
+
+        obs.checks_after_edits = Some(1);
+        let d = coach_dimensions(&obs);
+        assert_eq!(d[0].label, CoachLabel::Thin);
+
+        obs.edits_count = Some(0);
+        assert!(coach_dimensions(&obs).is_empty());
+    }
+
+    #[test]
+    fn thrash_and_balance_and_delegation() {
+        let mut obs = SessionCoachingObs::default();
+        obs.identical_tool_name = Some("search_replace".into());
+        obs.identical_tool_streak = Some(22);
+        obs.tool_failure_count = Some(15);
+        obs.tool_call_count = Some(671);
+        obs.explore_count = Some(197);
+        obs.act_count = Some(346);
+        obs.subagent_spawn_count = Some(2);
+        let d = coach_dimensions(&obs);
+        assert!(d.iter().any(|x| x.id == "tool_thrash" && x.label == CoachLabel::Watch));
+        assert!(d.iter().any(|x| x.id == "explore_act_balance" && x.label == CoachLabel::Observed));
+        assert!(d.iter().any(|x| x.id == "delegation" && x.label == CoachLabel::Observed));
+    }
 }
