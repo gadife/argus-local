@@ -44,7 +44,8 @@ impl Index {
                 tools_proposed INTEGER NOT NULL,
                 tools_accepted INTEGER NOT NULL,
                 source TEXT NOT NULL,
-                cost_complete INTEGER NOT NULL
+                cost_complete INTEGER NOT NULL,
+                is_active INTEGER NOT NULL
             );
             CREATE INDEX IF NOT EXISTS idx_sessions_started ON sessions(started_at);
             CREATE INDEX IF NOT EXISTS idx_sessions_tool ON sessions(tool);
@@ -78,8 +79,8 @@ impl Index {
                     id, tool, model, started_at, ended_at,
                     input_tokens, output_tokens, tokens_known,
                     tools_proposed, tools_accepted,
-                    source, cost_complete
-                ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12)
+                    source, cost_complete, is_active
+                ) VALUES (?1,?2,?3,?4,?5,?6,?7,?8,?9,?10,?11,?12,?13)
                 ON CONFLICT(id) DO UPDATE SET
                     tool=excluded.tool,
                     model=excluded.model,
@@ -91,7 +92,8 @@ impl Index {
                     tools_proposed=excluded.tools_proposed,
                     tools_accepted=excluded.tools_accepted,
                     source=excluded.source,
-                    cost_complete=excluded.cost_complete
+                    cost_complete=excluded.cost_complete,
+                    is_active=excluded.is_active
                 "#,
             )?;
             for r in rows {
@@ -108,6 +110,7 @@ impl Index {
                     r.tools_accepted,
                     r.source,
                     if r.cost_complete { 1 } else { 0 },
+                    if r.is_active { 1 } else { 0 },
                 ])?;
             }
         }
@@ -152,10 +155,10 @@ impl Index {
             SELECT id, tool, model, started_at, ended_at,
                    input_tokens, output_tokens, tokens_known,
                    tools_proposed, tools_accepted,
-                   source, cost_complete
+                   source, cost_complete, is_active
             FROM sessions
-            WHERE started_at >= ?1
-            ORDER BY started_at DESC
+            WHERE started_at >= ?1 OR ended_at >= ?1 OR is_active = 1
+            ORDER BY is_active DESC, started_at DESC
             "#,
         )?;
         let iter = stmt.query_map(params![since], |row| {
@@ -178,6 +181,7 @@ impl Index {
                 tools_accepted: row.get(9)?,
                 source: row.get(10)?,
                 cost_complete: row.get::<_, i64>(11)? != 0,
+                is_active: row.get::<_, i64>(12)? != 0,
             })
         })?;
         let mut out = Vec::new();

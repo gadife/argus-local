@@ -78,6 +78,7 @@
 .ship-list strong{color:var(--text)}
 .ship-note{margin-top:14px;font-size:11px;color:var(--dim);border-top:1px solid var(--border);padding-top:10px}
 .stub-tag{display:inline-block;margin-left:6px;font-size:10px;color:var(--orange);border:1px solid rgba(245,158,11,0.4);border-radius:999px;padding:1px 6px;vertical-align:middle}
+.active-tag{display:inline-block;margin-left:6px;font-size:10px;color:var(--green);border:1px solid rgba(74,222,128,0.4);border-radius:999px;padding:1px 6px;vertical-align:middle}
 .footer{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 28px;border-top:1px solid var(--border);font-size:12px;color:var(--dim)}
 .footer-left{display:flex;align-items:center;gap:10px}
 .insights-grid{display:grid;grid-template-columns:2fr 1fr;gap:14px}
@@ -259,7 +260,7 @@ function renderToday(){
   const stubTag=ship.is_stub?'<span class="stub-tag">unconfigured</span>':'';
   $('#content').innerHTML=`
     <div class="kpis">
-      <div class="card kpi"><div class="label">Sessions</div><div class="val">${d.sessions}</div><div class="sub">Completed sessions</div></div>
+      <div class="card kpi"><div class="label">Sessions</div><div class="val">${d.sessions}</div><div class="sub">${d.sessions_active>0?`${d.sessions-d.sessions_active} completed · ${d.sessions_active} active`:'Completed sessions'}</div></div>
       <div class="card kpi"><div class="label">Tokens</div><div class="val">${fmtTokKnown(d.tokens,d.tokens_known)}</div><div class="sub">${d.tokens_known?'Total estimated tokens':'Unknown — no token data'}</div></div>
       <div class="card kpi"><div class="label">$ Est. spend</div><div class="val">${d.tokens_known?fmtUsd(d.est_spend_usd):'—'}</div><div class="sub">estimate</div></div>
       <div class="card kpi"><div class="label">Tool accept</div><div class="val">${accept}</div><div class="sub">Accepted / proposed</div></div>
@@ -308,7 +309,7 @@ function renderInsights(){
       <div class="findings">${findings}</div>
       <div class="card ctx">
         <div class="section-title" style="margin-top:0">Context</div>
-        <div class="row"><span>Sessions</span><strong>${c.sessions}</strong></div>
+        <div class="row"><span>Sessions</span><strong>${c.sessions}${c.sessions_active>0?` <span style="color:var(--dim);font-weight:400">(${c.sessions_active} active)</span>`:''}</strong></div>
         <div class="row"><span>Tokens</span><strong>${fmtTokKnown(c.tokens,c.tokens_known)}</strong></div>
         <div class="row"><span>Est. spend</span><strong>${c.tokens_known?fmtUsd(c.est_spend_usd)+' <span style="color:var(--dim);font-weight:400">estimate</span>':'—'}</strong></div>
         <div class="row"><span>Tool accept</span><strong>${accept}</strong></div>
@@ -418,6 +419,7 @@ function sessionDetailHtml(a, detail){
     const tok=(!a.tokens_known)?'\u2014':(!a.cost_complete?`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">context (not billable in/out)</span>`:`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">(in ${fmtTok(a.input_tokens)} / out ${fmtTok(a.output_tokens)})</span>`);
     return `<div class="detail-grid">
       <div><div class="k">Session id</div><div class="v" style="font-weight:500;font-size:12px;word-break:break-all">${esc(a.id)}</div></div>
+      <div><div class="k">Status</div><div class="v">${a.is_active?'<span class="active-tag" style="margin-left:0">active</span>':'completed'}</div></div>
       <div><div class="k">Tool</div><div class="v">${esc(a.tool)}</div></div>
       <div><div class="k">Model</div><div class="v">${esc(a.model)||'\u2014'}</div></div>
       <div><div class="k">${a.cost_complete?'Tokens':'Tokens / context'}</div><div class="v">${tok}</div></div>
@@ -457,6 +459,7 @@ function sessionDetailHtml(a, detail){
   const sum=sectionBlock('Summary', [
     ['Title', t.generated_title?esc(t.generated_title):null],
     ['Kind', t.session_kind?esc(t.session_kind):null],
+    ['Status', a.is_active?'<span class="active-tag" style="margin-left:0">active</span>':'completed'],
     ['cwd', t.cwd?esc(t.cwd):null],
     ['Model', t.model?esc(t.model):(a.model?esc(a.model):null)],
     ['Source', esc(a.source||a.tool)],
@@ -507,7 +510,7 @@ function renderActivity(){
   const rows=list.map(a=>{
     const sel=a.id===SELECTED_SESSION?' sel':'';
     return `<tr class="${sel.trim()}" data-sid="${esc(a.id)}">
-      <td>${esc(a.time_range)}</td><td>${esc(a.tool)}</td><td>${esc(a.model)||'\u2014'}</td>
+      <td>${esc(a.time_range)}</td><td>${a.is_active?'<span class="active-tag" style="margin-left:0">active</span>':''}</td><td>${esc(a.tool)}</td><td>${esc(a.model)||'\u2014'}</td>
       <td>${fmtTokKnown(a.tokens,a.tokens_known)}</td>
       <td>${a.duration?esc(a.duration):'\u2014'}</td>
       <td>${a.cost_complete?'':'!'}</td></tr>`;
@@ -518,8 +521,8 @@ function renderActivity(){
     <div class="act-layout">
       <div class="card">
         <div class="section-title" style="margin-top:0">Sessions</div>
-        <table class="table" id="actTable"><thead><tr><th>Time</th><th>Tool</th><th>Model</th><th>Tokens</th><th>Dur</th><th></th></tr></thead>
-        <tbody>${rows||'<tr><td colspan="6" style="color:var(--dim)">No sessions in period</td></tr>'}</tbody></table>
+        <table class="table" id="actTable"><thead><tr><th>Time</th><th>Status</th><th>Tool</th><th>Model</th><th>Tokens</th><th>Dur</th><th></th></tr></thead>
+        <tbody>${rows||'<tr><td colspan="7" style="color:var(--dim)">No sessions in period</td></tr>'}</tbody></table>
       </div>
       <div class="card" id="actDetailCard">
         <div class="section-title" style="margin-top:0">Session detail</div>

@@ -170,6 +170,7 @@ fn parse_session_dir(signals_path: &Path) -> Result<Option<SessionRecord>> {
         tools_accepted: tool_calls,
         source: "grok".into(),
         cost_complete: false,
+        is_active: false,
     }))
 }
 

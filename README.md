@@ -112,7 +112,7 @@ SQLite index: `%LOCALAPPDATA%/argus-local/index.sqlite` (Windows) or platform eq
 
 | Tool | Source | Notes |
 |------|--------|-------|
-| Claude Code | `~/.claude/**/*.jsonl` (+ best-effort AppData) | Real parser |
+| Claude Code | `~/.claude/projects/<project>/<uuid>.jsonl` (+ `CLAUDE_CONFIG_DIR`, AppData). Active = `~/.claude/sessions/{pid}.json` still present, or last event in last 15m. | Real parser |
 | Cursor | `state.vscdb` / ai-tracking under Cursor User storage | Best-effort; copies DB to avoid locks |
 | Codex | Hidden when absent | No local adapter in v1 - never invent stub rows |
 | Grok | `~/.grok/sessions/**/signals.json` (+ summary) | Live from disk; context tokens; marked **cost incomplete** |

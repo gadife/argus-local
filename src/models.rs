@@ -17,6 +17,9 @@ pub struct SessionRecord {
     pub tools_accepted: i64,
     pub source: String, // "claude" | "cursor" | "fixture" | "stub"
     pub cost_complete: bool,
+    /// True when the adapter observed the session still in progress (recent transcript write).
+    #[serde(default)]
+    pub is_active: bool,
 }
 
 impl SessionRecord {
@@ -26,6 +29,11 @@ impl SessionRecord {
         } else {
             0
         }
+    }
+
+    /// Overlaps [since, now]: started or last-seen in the window, or still running.
+    pub fn overlaps_period(&self, since: DateTime<Utc>) -> bool {
+        self.is_active || self.started_at >= since || self.ended_at >= since
     }
 }
 
@@ -41,6 +49,9 @@ pub struct AdapterStatus {
 pub struct PeriodRollup {
     pub period_days: u32,
     pub sessions: i64,
+    /// Count of `is_active` sessions included in `sessions`.
+    #[serde(default)]
+    pub sessions_active: i64,
     pub tokens: i64,
     pub tokens_known: bool,
     pub est_spend_usd: f64,
@@ -86,6 +97,8 @@ pub struct ActivityRow {
     /// Adapter partial/missing note when applicable; empty otherwise.
     pub adapter_note: String,
     pub est_spend_usd: f64,
+    #[serde(default)]
+    pub is_active: bool,
 }
 
 /// Per-session telemetry for Activity detail (ARG-38).

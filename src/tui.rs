@@ -2,7 +2,7 @@
 use crate::insights::build_insights;
 use crate::adapters::{coach_dimensions, coaching_has_any, load_session_coaching, load_session_telemetry};
 use crate::models::{InsightsPayload, LanguageLock, PeriodRollup, SessionRecord, SessionTelemetry};
-use crate::rollups::{ShippingContext, format_tokens, rollup};
+use crate::rollups::{ShippingContext, format_tokens, rollup, sessions_kpi_sub};
 use crate::SessionStore;
 use anyhow::Result;
 use crossterm::event::{self, Event, KeyCode, KeyEventKind};
@@ -725,7 +725,8 @@ fn draw_today(f: &mut Frame, area: Rect, app: &App) {
         .map(|p| format!("{:.0}%", p))
         .unwrap_or_else(|| "\u{2014}".into());
 
-    render_kpi(f, kpis[0], &d.sessions.to_string(), "sessions", "completed");
+    let sess_sub = sessions_kpi_sub(d.sessions, d.sessions_active);
+    render_kpi(f, kpis[0], &d.sessions.to_string(), "sessions", &sess_sub);
     render_kpi(
         f,
         kpis[1],
@@ -780,13 +781,16 @@ fn draw_today(f: &mut Frame, area: Rect, app: &App) {
         .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
         .split(outer[2]);
 
-    let header = Row::new(vec!["time", "tool", "model", "tokens", "est."]).style(dim());
+    let header = Row::new(vec!["time", "status", "tool", "model", "tokens", "est."]).style(dim());
     let rows: Vec<Row> = d
         .activity
         .iter()
         .map(|a| {
+            let time_style = if a.is_active { accent() } else { muted() };
+            let status = if a.is_active { "active" } else { "" };
             Row::new(vec![
-                Cell::from(a.time_range.clone()).style(muted()),
+                Cell::from(a.time_range.clone()).style(time_style),
+                Cell::from(status).style(if a.is_active { accent() } else { dim() }),
                 Cell::from(a.tool.clone()),
                 Cell::from(a.model.clone()).style(muted()),
                 Cell::from(tok_label(a.tokens, a.tokens_known)),
@@ -797,10 +801,11 @@ fn draw_today(f: &mut Frame, area: Rect, app: &App) {
     let table = Table::new(
         rows,
         [
-            Constraint::Length(13),
+            Constraint::Length(16),
+            Constraint::Length(8),
             Constraint::Length(10),
-            Constraint::Min(16),
-            Constraint::Length(10),
+            Constraint::Min(14),
+            Constraint::Length(8),
             Constraint::Length(8),
         ],
     )
@@ -1025,7 +1030,7 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
         .constraints([Constraint::Percentage(58), Constraint::Percentage(42)])
         .split(area);
 
-    let header = Row::new(vec!["time", "tool", "model", "tokens", "dur"]).style(dim());
+    let header = Row::new(vec!["time", "status", "tool", "model", "tokens", "dur"]).style(dim());
     let rows: Vec<Row> = list
         .iter()
         .enumerate()
@@ -1034,11 +1039,15 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
                 Style::default()
                     .fg(Color::Black)
                     .bg(Color::Rgb(74, 222, 128))
+            } else if a.is_active {
+                accent()
             } else {
                 Style::default()
             };
+            let status = if a.is_active { "active" } else { "" };
             Row::new(vec![
                 Cell::from(a.time_range.clone()),
+                Cell::from(status),
                 Cell::from(a.tool.clone()),
                 Cell::from(if a.model.is_empty() {
                     "\u{2014}".into()
@@ -1058,7 +1067,8 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
     let table = Table::new(
         rows,
         [
-            Constraint::Length(13),
+            Constraint::Length(16),
+            Constraint::Length(8),
             Constraint::Length(10),
             Constraint::Min(12),
             Constraint::Length(8),
@@ -1113,6 +1123,17 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
             if let Some(ref cwd) = tel.cwd {
                 push_kv(&mut lines, "cwd", cwd.clone());
             }
+            lines.push(Line::from(vec![
+                Span::styled(format!("{:<16}", "status"), dim()),
+                Span::styled(
+                    if a.is_active { "active" } else { "completed" },
+                    if a.is_active {
+                        accent().add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(Color::White)
+                    },
+                ),
+            ]));
             push_kv(&mut lines, "tool", a.tool.clone());
             let model = tel
                 .model

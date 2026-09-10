@@ -68,12 +68,12 @@ pub fn build_insights(
         if pct >= 80.0 {
             let accepted: i64 = sessions
                 .iter()
-                .filter(|s| s.started_at >= since)
+                .filter(|s| s.overlaps_period(since))
                 .map(|s| s.tools_accepted)
                 .sum();
             let proposed: i64 = sessions
                 .iter()
-                .filter(|s| s.started_at >= since)
+                .filter(|s| s.overlaps_period(since))
                 .map(|s| s.tools_proposed)
                 .sum();
             findings.push(Finding {
@@ -154,7 +154,7 @@ pub fn build_insights(
     // 5) Long sessions / model dominance
     let long: Vec<&SessionRecord> = sessions
         .iter()
-        .filter(|s| s.started_at >= since)
+        .filter(|s| s.overlaps_period(since))
         .filter(|s| (s.ended_at - s.started_at) > Duration::minutes(60))
         .collect();
     if !long.is_empty() {
@@ -206,7 +206,7 @@ pub fn build_insights(
 fn period_has_grok_turn_io(sessions: &[SessionRecord], since: chrono::DateTime<Utc>) -> bool {
     sessions
         .iter()
-        .filter(|s| s.source == "grok" && s.started_at >= since)
+        .filter(|s| s.source == "grok" && s.overlaps_period(since))
         .any(|s| match load_session_telemetry(&s.id) {
             Ok(tel) => {
                 tel.input_tokens.unwrap_or(0) > 0 || tel.output_tokens.unwrap_or(0) > 0
@@ -232,7 +232,7 @@ fn push_coaching_findings(
     let mut subagent_dirs = 0i64;
     let mut coaching_sessions = 0i64;
 
-    for s in sessions.iter().filter(|s| s.source == "grok" && s.started_at >= since) {
+    for s in sessions.iter().filter(|s| s.source == "grok" && s.overlaps_period(since)) {
         let Ok(obs) = load_session_coaching(&s.id) else {
             continue;
         };

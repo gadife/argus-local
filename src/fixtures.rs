@@ -23,6 +23,27 @@ pub fn fixture_sessions() -> Vec<SessionRecord> {
             tools_accepted: 2,
             source: "fixture".into(),
             cost_complete: true,
+            is_active: false,
+        });
+    }
+
+    // In-progress Claude session (still running)
+    {
+        let start = now - Duration::minutes(42);
+        rows.push(SessionRecord {
+            id: "fixture:claude:active".into(),
+            tool: "Claude Code".into(),
+            model: "Claude Sonnet 4".into(),
+            started_at: start,
+            ended_at: now - Duration::seconds(20),
+            input_tokens: 48_000,
+            output_tokens: 9_200,
+            tokens_known: true,
+            tools_proposed: 3,
+            tools_accepted: 3,
+            source: "fixture".into(),
+            cost_complete: true,
+            is_active: true,
         });
     }
 
@@ -53,6 +74,7 @@ pub fn fixture_sessions() -> Vec<SessionRecord> {
             tools_accepted: 7 + (i % 4) as i64,
             source: "fixture".into(),
             cost_complete: true,
+            is_active: false,
         });
     }
 
@@ -78,6 +100,7 @@ pub fn fixture_sessions() -> Vec<SessionRecord> {
             tools_accepted: 5,
             source: "fixture".into(),
             cost_complete: true,
+            is_active: false,
         });
     }
 
@@ -97,6 +120,7 @@ pub fn fixture_sessions() -> Vec<SessionRecord> {
             tools_accepted: 4,
             source: "fixture".into(),
             cost_complete: true,
+            is_active: false,
         });
     }
 
@@ -116,6 +140,7 @@ pub fn fixture_sessions() -> Vec<SessionRecord> {
             tools_accepted: 0,
             source: "fixture".into(),
             cost_complete: false,
+            is_active: false,
         });
     }
 

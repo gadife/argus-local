@@ -281,6 +281,7 @@ fn parse_cursor_blob(key: &str, value: &str) -> Option<SessionRecord> {
         tools_accepted: accepted,
         source: "cursor".into(),
         cost_complete: tokens_known,
+        is_active: false,
     })
 }
 

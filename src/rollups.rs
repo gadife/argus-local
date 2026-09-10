@@ -42,13 +42,20 @@ pub fn rollup(
     used_fixtures: bool,
     shipping: ShippingContext<'_>,
 ) -> PeriodRollup {
-    let since = Utc::now() - Duration::days(period_days as i64);
-    let filtered: Vec<&SessionRecord> = sessions
+    let now = Utc::now();
+    let since = now - Duration::days(period_days as i64);
+    let mut filtered: Vec<&SessionRecord> = sessions
         .iter()
-        .filter(|s| s.started_at >= since)
+        .filter(|s| s.overlaps_period(since))
         .collect();
+    filtered.sort_by(|a, b| {
+        b.is_active
+            .cmp(&a.is_active)
+            .then_with(|| b.started_at.cmp(&a.started_at))
+    });
 
     let sessions_n = filtered.len() as i64;
+    let sessions_active = filtered.iter().filter(|s| s.is_active).count() as i64;
     let tokens: i64 = filtered.iter().map(|s| s.total_tokens()).sum();
     let any_tokens_known = filtered.iter().any(|s| s.tokens_known);
     let est_spend: f64 = filtered
@@ -112,54 +119,8 @@ pub fn rollup(
 
     let activity: Vec<ActivityRow> = filtered
         .iter()
-        .take(50)
-        .map(|s| {
-            let start = s.started_at.format("%Y-%m-%d %H:%M").to_string();
-            let end = s.ended_at.format("%H:%M").to_string();
-            let start_hm = s.started_at.format("%H:%M").to_string();
-            let secs = (s.ended_at - s.started_at).num_seconds().max(0);
-            let duration = if secs >= 3600 {
-                format!("{}h {}m", secs / 3600, (secs % 3600) / 60)
-            } else if secs >= 60 {
-                format!("{}m", secs / 60)
-            } else if secs > 0 {
-                format!("{secs}s")
-            } else {
-                String::new()
-            };
-            let adapter_note = adapter_status
-                .iter()
-                .find(|a| {
-                    a.name.eq_ignore_ascii_case(&s.tool)
-                        || a.name.eq_ignore_ascii_case(&s.source)
-                })
-                .filter(|a| a.partial || !a.ok)
-                .map(|a| a.detail.clone())
-                .unwrap_or_default();
-            ActivityRow {
-                id: s.id.clone(),
-                time_range: format!("{start_hm} - {end}"),
-                started_at: start,
-                ended_at: s.ended_at.format("%Y-%m-%d %H:%M").to_string(),
-                duration,
-                tool: s.tool.clone(),
-                model: s.model.clone(),
-                tokens: s.total_tokens(),
-                input_tokens: if s.tokens_known { s.input_tokens } else { 0 },
-                output_tokens: if s.tokens_known { s.output_tokens } else { 0 },
-                tokens_known: s.tokens_known,
-                tools_proposed: s.tools_proposed,
-                tools_accepted: s.tools_accepted,
-                cost_complete: s.cost_complete,
-                source: s.source.clone(),
-                adapter_note,
-                est_spend_usd: if s.cost_complete && s.tokens_known {
-                    estimate_spend_usd(&s.model, s.input_tokens, s.output_tokens)
-                } else {
-                    0.0
-                },
-            }
-        })
+        .take(200)
+        .map(|s| activity_row_at(s, &adapter_status, now))
         .collect();
 
     let shipping_snap = snapshot_for_period(
@@ -173,6 +134,7 @@ pub fn rollup(
     PeriodRollup {
         period_days,
         sessions: sessions_n,
+        sessions_active,
         tokens,
         tokens_known: any_tokens_known,
         est_spend_usd: est_spend,
@@ -205,10 +167,19 @@ pub fn absent_shipping() -> ShippingStub {
 
 /// Build a single ActivityRow for session detail API (ARG-38).
 pub fn activity_row_for(s: &SessionRecord, adapter_status: &[AdapterStatus]) -> ActivityRow {
+    activity_row_at(s, adapter_status, Utc::now())
+}
+
+fn activity_row_at(
+    s: &SessionRecord,
+    adapter_status: &[AdapterStatus],
+    now: chrono::DateTime<Utc>,
+) -> ActivityRow {
     let start = s.started_at.format("%Y-%m-%d %H:%M").to_string();
-    let end = s.ended_at.format("%H:%M").to_string();
+    let end_at = if s.is_active { now } else { s.ended_at };
+    let end = end_at.format("%H:%M").to_string();
     let start_hm = s.started_at.format("%H:%M").to_string();
-    let secs = (s.ended_at - s.started_at).num_seconds().max(0);
+    let secs = (end_at - s.started_at).num_seconds().max(0);
     let duration = if secs >= 3600 {
         format!("{}h {}m", secs / 3600, (secs % 3600) / 60)
     } else if secs >= 60 {
@@ -226,11 +197,20 @@ pub fn activity_row_for(s: &SessionRecord, adapter_status: &[AdapterStatus]) -> 
         .filter(|a| a.partial || !a.ok)
         .map(|a| a.detail.clone())
         .unwrap_or_default();
+    let time_range = if s.is_active {
+        format!("{start_hm} · active")
+    } else {
+        format!("{start_hm} - {end}")
+    };
     ActivityRow {
         id: s.id.clone(),
-        time_range: format!("{start_hm} - {end}"),
+        time_range,
         started_at: start,
-        ended_at: s.ended_at.format("%Y-%m-%d %H:%M").to_string(),
+        ended_at: if s.is_active {
+            "now".into()
+        } else {
+            s.ended_at.format("%Y-%m-%d %H:%M").to_string()
+        },
         duration,
         tool: s.tool.clone(),
         model: s.model.clone(),
@@ -248,5 +228,79 @@ pub fn activity_row_for(s: &SessionRecord, adapter_status: &[AdapterStatus]) -> 
         } else {
             0.0
         },
+        is_active: s.is_active,
+    }
+}
+
+pub fn sessions_kpi_sub(sessions: i64, sessions_active: i64) -> String {
+    if sessions_active > 0 {
+        let completed = (sessions - sessions_active).max(0);
+        format!("{completed} completed · {sessions_active} active")
+    } else {
+        "completed".into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn rec(
+        id: &str,
+        started_hours_ago: i64,
+        ended_hours_ago: i64,
+        active: bool,
+    ) -> SessionRecord {
+        let now = Utc::now();
+        SessionRecord {
+            id: id.into(),
+            tool: "Claude Code".into(),
+            model: "claude-sonnet-4".into(),
+            started_at: now - Duration::hours(started_hours_ago),
+            ended_at: now - Duration::hours(ended_hours_ago),
+            input_tokens: 10,
+            output_tokens: 2,
+            tokens_known: true,
+            tools_proposed: 0,
+            tools_accepted: 0,
+            source: "claude".into(),
+            cost_complete: true,
+            is_active: active,
+        }
+    }
+
+    #[test]
+    fn period_includes_active_session_that_started_before_window() {
+        let sessions = vec![
+            rec("old-done", 48, 40, false),
+            rec("old-still-open", 48, 0, true),
+            rec("today", 2, 1, false),
+        ];
+        let roll = rollup(&sessions, 1, vec![], false, ShippingContext {
+            configured: false,
+            events: &[],
+            auth_source: None,
+            login: None,
+        });
+        assert_eq!(roll.sessions, 2);
+        assert_eq!(roll.sessions_active, 1);
+        assert_eq!(roll.activity[0].id, "old-still-open");
+        assert!(roll.activity[0].is_active);
+        assert!(roll.activity[0].time_range.contains("active"));
+        assert_eq!(sessions_kpi_sub(roll.sessions, roll.sessions_active), "1 completed · 1 active");
+    }
+
+    #[test]
+    fn period_includes_session_that_ended_inside_window() {
+        // Started 3 days ago, last event today — 1-day window still counts it.
+        let sessions = vec![rec("span", 72, 1, false)];
+        let roll = rollup(&sessions, 1, vec![], false, ShippingContext {
+            configured: false,
+            events: &[],
+            auth_source: None,
+            login: None,
+        });
+        assert_eq!(roll.sessions, 1);
+        assert!(!roll.activity[0].is_active);
     }
 }
