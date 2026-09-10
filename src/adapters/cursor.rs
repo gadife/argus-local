@@ -57,7 +57,7 @@ pub fn cursor_candidate_dirs() -> Vec<PathBuf> {
     dirs
 }
 
-fn find_vscdb_files() -> Vec<PathBuf> {
+pub(crate) fn find_vscdb_files_for_prompts() -> Vec<PathBuf> {
     let mut out = Vec::new();
     for dir in cursor_candidate_dirs() {
         if !dir.exists() {
@@ -85,7 +85,7 @@ fn find_vscdb_files() -> Vec<PathBuf> {
 }
 
 pub fn scan_cursor() -> Result<(Vec<SessionRecord>, AdapterStatus)> {
-    let files = find_vscdb_files();
+    let files = find_vscdb_files_for_prompts();
     if files.is_empty() {
         return Ok((
             vec![],
@@ -291,3 +291,4 @@ fn blake_short(s: &str) -> String {
     s.hash(&mut h);
     format!("{:x}", h.finish())
 }
+

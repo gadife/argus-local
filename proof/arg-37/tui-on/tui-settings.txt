@@ -1,0 +1,40 @@
+ Argus Local                                                                                        
+  Today  │  Activity  │  Tools  │  Insights  │  Shipping  │  Share  │  Settings                     
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Settings  7d    Prompts on (local)   opt-in GitHub + local prompts - never invent / never upload    
+ Demo fixtures — not live adapter data. Label shown so this is never silent fake-as-real.           
+                                                                                                    
+ adapters  Claude Code · ok   Cursor · ok   Codex · ok   Grok · partial     Share · Off             
+                                                                                                    
+┌ settings ────────────────────────────────────────────────────────────────────────────────────────┐
+│Settings                                                                                          │
+│                                                                                                  │
+│Local prompts (opt-in)status: ON (local)press p to toggleWhen ON: Activity session detail can show│
+│on-device prompt/response text.Local only — never uploaded. Share stays Off.When OFF: aggregates  │
+│only — no raw prompts.Persisted as prompts.enabled in:                                            │
+│C:\Users\Gadi\AppData\Local\argus-local\settings.jsonGitHub shipping (opt-in)configured now:      │
+│falseopted in: trueHow to configure (no secrets in repo):  1. Set ARGUS_GITHUB_TOKEN to a personal│
+│PAT, or  2. Set ARGUS_GITHUB_ENABLED=1 and use authenticated gh, or  3. Write                     │
+│{"github":{"enabled":true}} to the same settings file.Prefer gh when authenticated. Never invents │
+│counts when unconfigured.Share to org defaults Off.                                               │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+│                                                                                                  │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  │  p toggle prompts · tab/hl · 1 today · q q

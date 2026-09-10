@@ -1,0 +1,20 @@
+ARG-37 proof (2026-09-09 ET)
+
+API (fixtures):
+- Off: GET /api/dashboard prompts_enabled=false; GET /api/session/fixture:claude:arg37-prompts-demo has no prompt_text/response_text
+- On: POST /api/settings/prompts {enabled:true} -> prompts_enabled=true; same session returns prompt+response sample text
+- Artifacts: proof/arg-37/session-off.json, session-on.json
+
+TUI (fixtures):
+- Off: proof/arg-37/tui-off/tui-activity.txt shows 'aggregates only — no raw prompts'; no Prompts chip
+- On: proof/arg-37/tui-on/tui-activity.txt shows chip 'Prompts on (local)', prompt+response for fixture:claude:arg37-prompts-demo; footer 'local prompts on — never uploaded — Share Off'
+- Settings: tui-settings.txt documents p toggle
+
+Adapters surveyed:
+- Grok: chat_history.jsonl (type=user with <user_query>, type=assistant text). Never auth.json.
+- Claude Code: jsonl message content role/type user|assistant when present.
+- Cursor: best-effort bubbles/messages when blob matches session id hash; often unavailable.
+- Fixtures: fixture:claude:arg37-prompts-demo carries sample texts when opted in.
+
+Language lock: Today/Insights/Shipping metrics language unchanged; Activity footer/detail only when prompts On.
+Share stays Off. Hold merge for Gadi.

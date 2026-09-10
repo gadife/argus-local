@@ -74,6 +74,10 @@ struct App {
     activity_idx: usize,
     /// When true, Activity shows the selected session detail pane focus.
     activity_detail: bool,
+    /// Local prompts opt-in (settings.json prompts.enabled).
+    prompts_enabled: bool,
+    /// Expand truncated prompt/response in Activity detail.
+    prompts_expand: bool,
     should_quit: bool,
 }
 
@@ -118,8 +122,20 @@ impl App {
             github_login: store.github_login,
             activity_idx: 0,
             activity_detail: false,
+            prompts_enabled: crate::settings::prompts_enabled(),
+            prompts_expand: false,
             should_quit: false,
         }
+    }
+
+    fn toggle_prompts(&mut self) {
+        let next = !self.prompts_enabled;
+        if let Err(e) = crate::settings::set_prompts_enabled(next) {
+            eprintln!("argus-local: prompts toggle failed: {e}");
+            return;
+        }
+        self.prompts_enabled = crate::settings::prompts_enabled();
+        self.prompts_expand = false;
     }
 
 
@@ -378,6 +394,14 @@ fn loop_ui<B: Backend>(terminal: &mut Terminal<B>, app: &mut App) -> Result<()> 
                         app.page = Page::Activity;
                         app.activity_detail = app.activity_len() > 0;
                     }
+                    KeyCode::Char('p') if app.page == Page::Settings => {
+                        app.toggle_prompts();
+                    }
+                    KeyCode::Char('e')
+                        if app.page == Page::Activity && app.prompts_enabled =>
+                    {
+                        app.prompts_expand = !app.prompts_expand;
+                    }
                     _ => {}
                 }
             }
@@ -397,16 +421,22 @@ pub fn write_proof_screens(store: SessionStore, days: u32, dir: &Path) -> Result
     let height = 40u16;
     let mut out_paths = Vec::new();
 
-    for (page, name) in [(Page::Today, "tui-today"), (Page::Activity, "tui-activity"), (Page::Insights, "tui-insights"), (Page::Shipping, "tui-shipping")] {
+    for (page, name) in [(Page::Today, "tui-today"), (Page::Activity, "tui-activity"), (Page::Insights, "tui-insights"), (Page::Shipping, "tui-shipping"), (Page::Settings, "tui-settings")] {
         app.page = page;
         if page == Page::Activity {
-            // Prefer an incomplete/Grok-style row so proof shows tokens/context labeling.
-            if let Some(i) = app
+            // Prefer ARG-37 demo session when prompts on; else incomplete/Grok-style row.
+            let idx = app
                 .today
                 .activity
                 .iter()
-                .position(|a| !a.cost_complete)
-            {
+                .position(|a| a.id == crate::adapters::FIXTURE_PROMPTS_ID)
+                .or_else(|| {
+                    app.today
+                        .activity
+                        .iter()
+                        .position(|a| !a.cost_complete)
+                });
+            if let Some(i) = idx {
                 app.activity_idx = i;
                 app.activity_detail = true;
             }
@@ -507,12 +537,12 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
         Page::Today => app.today.language_lock.estimates_note.clone(),
         Page::Insights => app.insights.language_lock.observations_note.clone(),
         Page::Shipping => app.today.language_lock.shipping_note.clone(),
-        Page::Settings => "opt-in GitHub - never invent when unconfigured".into(),
+        Page::Settings => "opt-in GitHub + local prompts - never invent / never upload".into(),
         Page::Activity => LanguageLock::default().observations_note,
         _ => LanguageLock::default().observations_note,
     };
     let period_chip = format!(" {}d ", app.days);
-    let line = Line::from(vec![
+    let mut spans = vec![
         Span::styled(format!("{} ", app.page.title()), title_style()),
         Span::styled(
             period_chip,
@@ -521,9 +551,19 @@ fn draw_header(f: &mut Frame, area: Rect, app: &App) {
                 .bg(Color::Rgb(31, 41, 55)),
         ),
         Span::raw("  "),
-        Span::styled(lock, dim()),
-    ]);
-    f.render_widget(Paragraph::new(line), area);
+    ];
+    if app.prompts_enabled {
+        spans.push(Span::styled(
+            " Prompts on (local) ",
+            Style::default()
+                .fg(Color::Black)
+                .bg(Color::Rgb(74, 222, 128))
+                .add_modifier(Modifier::BOLD),
+        ));
+        spans.push(Span::raw("  "));
+    }
+    spans.push(Span::styled(lock, dim()));
+    f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
 fn draw_fixture_banner(f: &mut Frame, area: Rect) {
@@ -570,21 +610,28 @@ fn draw_status(f: &mut Frame, area: Rect, app: &App) {
     f.render_widget(Paragraph::new(Line::from(spans)), area);
 }
 
-fn keymap_for(page: Page) -> &'static str {
+fn keymap_for(page: Page, prompts_on: bool) -> &'static str {
     match page {
         Page::Today => "tab/hl pages \u{00b7} d period \u{00b7} 1 today \u{00b7} 4 insights \u{00b7} q quit",
         Page::Insights => "tab/hl pages \u{00b7} d period \u{00b7} 1 today \u{00b7} 4 insights \u{00b7} q quit",
+        Page::Activity if prompts_on => {
+            "j/k select \u{00b7} Enter detail \u{00b7} e expand \u{00b7} Esc back \u{00b7} q quit"
+        }
         Page::Activity => "j/k select \u{00b7} Enter detail \u{00b7} Esc back \u{00b7} tab/hl \u{00b7} q quit",
         Page::Tools => "stub view \u{00b7} tab/hl pages \u{00b7} 1 today \u{00b7} 4 insights \u{00b7} q quit",
         Page::Shipping => "shipping \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
         Page::Share => "share off (v1) \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
-        Page::Settings => "settings - github opt-in \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
+        Page::Settings => "p toggle prompts \u{00b7} tab/hl \u{00b7} 1 today \u{00b7} q quit",
     }
 }
 
 fn draw_footer(f: &mut Frame, area: Rect, app: &App) {
-    let foot = app.today.language_lock.footer.clone();
-    let help = keymap_for(app.page);
+    let foot = if app.page == Page::Activity && app.prompts_enabled {
+        "local prompts on \u{2014} never uploaded \u{2014} Share Off".to_string()
+    } else {
+        app.today.language_lock.footer.clone()
+    };
+    let help = keymap_for(app.page, app.prompts_enabled);
     let line = Line::from(vec![
         Span::styled(foot, dim()),
         Span::styled("  \u{2502}  ", chrome()),
@@ -891,17 +938,26 @@ fn draw_settings(f: &mut Frame, area: Rect, app: &App) {
     let path = crate::adapters::settings_path_display();
     let opted = crate::adapters::is_opted_in();
     let configured = app.github_configured;
+    let prompts = if app.prompts_enabled {
+        "ON (local)"
+    } else {
+        "OFF (default)"
+    };
     let body = format!(
-        "GitHub shipping (opt-in)\n\nconfigured now: {configured}\nopted in: {opted}\n\nHow to configure (no secrets in repo):\n  1. Set ARGUS_GITHUB_TOKEN to a personal PAT, or\n  2. Set ARGUS_GITHUB_ENABLED=1 and use authenticated gh, or\n  3. Write {{\"github\":{{\"enabled\":true}}}} to:\n     {path}\n\nPrefer gh when authenticated. Never invents counts when unconfigured.\nShare to org defaults Off."
+        "Local prompts (opt-in)\n\nstatus: {prompts}\npress p to toggle\n\nWhen ON: Activity session detail can show on-device prompt/response text.\nLocal only \u{2014} never uploaded. Share stays Off.\nWhen OFF: aggregates only \u{2014} no raw prompts.\nPersisted as prompts.enabled in:\n  {path}\n\nGitHub shipping (opt-in)\n\nconfigured now: {configured}\nopted in: {opted}\n\nHow to configure (no secrets in repo):\n  1. Set ARGUS_GITHUB_TOKEN to a personal PAT, or\n  2. Set ARGUS_GITHUB_ENABLED=1 and use authenticated gh, or\n  3. Write {{\"github\":{{\"enabled\":true}}}} to the same settings file.\n\nPrefer gh when authenticated. Never invents counts when unconfigured.\nShare to org defaults Off."
     );
     let lines = vec![
         Line::from(Span::styled("Settings", title_style())),
         Line::from(""),
         Line::from(Span::styled(body, muted())),
     ];
-    f.render_widget(Paragraph::new(lines).wrap(Wrap { trim: true }).block(panel("settings")), area);
+    f.render_widget(
+        Paragraph::new(lines)
+            .wrap(Wrap { trim: true })
+            .block(panel("settings")),
+        area,
+    );
 }
-
 
 
 fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
@@ -952,7 +1008,7 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
         ],
     )
     .header(header)
-    .block(panel("sessions \u{00b7} aggregates only"));
+    .block(panel(if app.prompts_enabled { "sessions \u{00b7} prompts opt-in" } else { "sessions \u{00b7} aggregates only" }));
     f.render_widget(table, cols[0]);
 
     let selected = list.get(app.activity_idx);
@@ -1041,10 +1097,53 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
                 lines.push(Line::from(Span::styled(a.adapter_note.clone(), warn())));
             }
             lines.push(Line::from(""));
-            lines.push(Line::from(Span::styled(
-                "no raw prompts or code",
-                dim(),
-            )));
+            if app.prompts_enabled {
+                let texts = crate::adapters::load_session_texts(&a.id).unwrap_or_default();
+                let trunc = |s: &str, expand: bool| -> String {
+                    const N: usize = 280;
+                    if expand || s.chars().count() <= N {
+                        s.to_string()
+                    } else {
+                        let t: String = s.chars().take(N).collect();
+                        format!("{t}\u{2026} [e expand]")
+                    }
+                };
+                match (&texts.prompt_text, &texts.response_text) {
+                    (None, None) => {
+                        lines.push(Line::from(Span::styled(
+                            "prompts missing \u{2014} no on-disk prompt/response text",
+                            dim(),
+                        )));
+                    }
+                    _ => {
+                        if let Some(p) = &texts.prompt_text {
+                            lines.push(Line::from(Span::styled("prompt", dim())));
+                            lines.push(Line::from(Span::styled(
+                                trunc(p, app.prompts_expand),
+                                Style::default().fg(Color::White),
+                            )));
+                            lines.push(Line::from(""));
+                        }
+                        if let Some(r) = &texts.response_text {
+                            lines.push(Line::from(Span::styled("response", dim())));
+                            lines.push(Line::from(Span::styled(
+                                trunc(r, app.prompts_expand),
+                                Style::default().fg(Color::White),
+                            )));
+                        }
+                        lines.push(Line::from(""));
+                        lines.push(Line::from(Span::styled(
+                            "local only \u{2014} never uploaded \u{2014} Share Off",
+                            dim(),
+                        )));
+                    }
+                }
+            } else {
+                lines.push(Line::from(Span::styled(
+                    "aggregates only \u{2014} no raw prompts",
+                    dim(),
+                )));
+            }
         }
     }
     f.render_widget(

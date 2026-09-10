@@ -1,0 +1,40 @@
+ Argus Local                                                                                        
+  Today  │  Activity  │  Tools  │  Insights  │  Shipping  │  Share  │  Settings                     
+────────────────────────────────────────────────────────────────────────────────────────────────────
+Today  7d   Local only — estimates ≠ invoice                                                        
+ Demo fixtures — not live adapter data. Label shown so this is never silent fake-as-real.           
+                                                                                                    
+ adapters  Claude Code · ok   Cursor · ok   Codex · ok   Grok · partial     Share · Off             
+                                                                                                    
+48                 │17.1M              │$128               │86%                │6                  │
+sessions           │tokens             │est. spend         │tool accept        │models             │
+completed          │estimated          │estimate ≠ invoice │accepted / proposed│unique             │
+                   │                   │                   │                   │                   │
+┌ by tool ─────────────────────────────────────────────────────────────────────────────────────────┐
+│found on device only                                                                              │
+│ Claude Code  8.9M   24s  █████████▃░░░░░░░░   52%                                                │
+│ Cursor       5.2M   14s  █████▄░░░░░░░░░░░░   31%                                                │
+│ Codex        2.4M    8s  ██▄░░░░░░░░░░░░░░░   14%                                                │
+│ Grok       600.0K    2s  ▅░░░░░░░░░░░░░░░░░    4%  cost incomplete                               │
+└──────────────────────────────────────────────────────────────────────────────────────────────────┘
+┌ activity ─────────────────────────────────────────────────────┐┌ shipping · unconfigured ────────┐
+│time          tool       model              tokens     est.    ││merged prs      —                │
+│19:07 - 19:25 Claude Cod Claude Sonnet 4    15.4K      $0      ││commits        —                 │
+│18:07 - 18:47 Cursor     GPT-4.1            250.0K     $1      ││files touched  —                 │
+│17:07 - 18:22 Claude Cod Claude Opus 4.6    220.0K     $6      ││                                 │
+│15:07 - 15:57 Codex      Codex Medium       300.0K     $1      ││GitHub shipping not configured — │
+│12:07 - 12:43 Claude Cod Claude Sonnet 4    235.0K     $1      ││enable github.enabled in         │
+│11:07 - 11:32 Grok       Grok               300.0K     —       ││C:\Users\Gadi\AppData\Local\argus│
+│11:07 - 11:48 Cursor     claude-4-sonnet    269.0K     $1      ││-local\settings.json or set      │
+│07:07 - 07:44 Claude Cod Claude Sonnet 4    250.0K     $1      ││ARGUS_GITHUB_TOKEN /             │
+│06:07 - 06:57 Codex      Codex Medium       300.0K     $1      ││ARGUS_GITHUB_ENABLED (uses gh    │
+│04:07 - 04:49 Cursor     claude-4-sonnet    288.0K     $2      ││when authenticated). No observed │
+│02:07 - 02:45 Claude Cod Claude Sonnet 4    265.0K     $1      ││PR/commit counts.                │
+│23:07 - 23:32 Grok       Grok               300.0K     —       ││                                 │
+│21:07 - 21:57 Codex      Codex Medium       300.0K     $1      ││                                 │
+│21:07 - 21:50 Cursor     GPT-4.1            307.0K     $1      ││                                 │
+│21:07 - 21:46 Claude Cod Claude Opus 4.6    280.0K     $7      ││                                 │
+│16:07 - 17:22 Claude Cod Claude Sonnet 4    295.0K     $2      ││                                 │
+└───────────────────────────────────────────────────────────────┘└─────────────────────────────────┘
+────────────────────────────────────────────────────────────────────────────────────────────────────
+aggregates only — no raw prompts or code — local-first  │  tab/hl pages · d period · 1 today · 4 ins

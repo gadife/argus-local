@@ -93,6 +93,20 @@
 .ctx .barline .track>i{display:block;height:100%;background:var(--green)}
 .ctx-note{margin-top:12px;font-size:11px;color:var(--dim)}
 @media (max-width:1100px){.kpis{grid-template-columns:repeat(3,1fr)}.bytool{grid-template-columns:repeat(2,1fr)}.mid,.insights-grid{grid-template-columns:1fr}}
+
+.chip-prompts{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;background:rgba(74,222,128,.18);color:var(--ok);font-size:12px;font-weight:600;border:1px solid rgba(74,222,128,.35)}
+.prompt-box{margin-top:14px;padding:12px;border-radius:10px;background:rgba(255,255,255,.03);border:1px solid var(--border)}
+.prompt-box h4{margin:0 0 6px;font-size:12px;color:var(--dim);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.prompt-box pre{margin:0;white-space:pre-wrap;word-break:break-word;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px;line-height:1.45;color:var(--text);max-height:9.5em;overflow:hidden}
+.prompt-box pre.expanded{max-height:none}
+.prompt-box .expand{margin-top:8px;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12px}
+.toggle-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:0}
+.toggle.on{background:rgba(74,222,128,.35)}
+.toggle.on::after{transform:translateX(18px)}
+.gate{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:50}
+.gate .card{max-width:420px;margin:20px}
+
 </style>
 </head>
 <body>
@@ -136,7 +150,7 @@
     <div class="content" id="content"></div>
     <div class="footer">
       <div class="footer-left">
-        <span>aggregates only — no raw prompts or code — local-first</span>
+        <span id="footerLock">aggregates only — no raw prompts or code — local-first</span>
       </div>
       <div id="footerRight"></div>
     </div>
@@ -153,9 +167,44 @@ function syncFixtureBanner(){
   const on=!!(DATA&&DATA.used_fixtures);
   $('#fixtureBanner').classList.toggle('show', on);
 }
+
+let PROMPTS_ENABLED=false;
+let SESSION_DETAIL=null;
+let PROMPTS_GATE_SEEN=sessionStorage.getItem('argus_prompts_gate')==='1';
+function syncPromptsChrome(){
+  const foot=$('#footerLock');
+  const right=$('#footerRight');
+  if(PAGE==='activity' && PROMPTS_ENABLED){
+    if(foot) foot.textContent='local prompts on — never uploaded — Share Off';
+  } else {
+    if(foot) foot.textContent='aggregates only — no raw prompts or code — local-first';
+  }
+  if(right){
+    right.innerHTML = PROMPTS_ENABLED ? '<span class="chip-prompts">Prompts on (local)</span>' : '';
+  }
+}
+async function setPromptsEnabled(enabled){
+  const r=await fetch('/api/settings/prompts',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({enabled:!!enabled})});
+  const j=await r.json();
+  PROMPTS_ENABLED=!!(j.prompts_enabled);
+  if(DATA) DATA.prompts_enabled=PROMPTS_ENABLED;
+  syncPromptsChrome();
+  return j;
+}
+function truncHtml(text, expanded){
+  const raw=String(text??'');
+  const limit=600;
+  const needs=raw.length>limit;
+  const shown=(!needs||expanded)?raw:raw.slice(0,limit)+'…';
+  const btn=needs?`<button class="expand" data-expand="${expanded?'0':'1'}">${expanded?'Collapse':'Expand'}</button>`:'';
+  return `<pre class="${expanded?'expanded':''}">${esc(shown)}</pre>${btn}`;
+}
+
 async function load(){
   const r=await fetch('/api/dashboard?days='+DAYS);
   DATA=await r.json();
+  PROMPTS_ENABLED=!!(DATA&&DATA.prompts_enabled);
+  syncPromptsChrome();
   render();
 }
 function statusHtml(st){
@@ -269,19 +318,65 @@ function renderSettings(){
   const cfg=!!(DATA&&DATA.github_configured);
   const ship=(DATA&&DATA.today&&DATA.today.shipping)||{};
   $('#title').textContent='Settings';
-  $('#lockLine').textContent='opt-in GitHub - never invent when unconfigured';
+  $('#lockLine').textContent='opt-in GitHub + local prompts — never invent / never upload';
   syncFixtureBanner();
-  $('#content').innerHTML='<div class="card"><div class="section-title" style="margin-top:0">GitHub shipping</div><p style="color:var(--muted)">Configured now: <strong style="color:var(--text)">'+(cfg?'yes':'no')+'</strong>'+(ship.login?(' · '+esc(ship.login)+' via '+esc(ship.auth_source||'?')):'')+'</p><p style="color:var(--muted);font-size:13px">How to configure (secrets stay on this machine - never commit PATs):</p><ol style="color:var(--muted);font-size:13px;line-height:1.6"><li>Set env <code>ARGUS_GITHUB_TOKEN</code> to a personal PAT, or</li><li>Set <code>ARGUS_GITHUB_ENABLED=1</code> and use authenticated <code>gh</code>, or</li><li>Write <code>{"github":{"enabled":true}}</code> to <code>%LOCALAPPDATA%/argus-local/settings.json</code> (uses gh/token; no secret in the repo).</li></ol><p style="color:var(--dim);font-size:12px">When unconfigured, Shipping shows dashes - no fake stub counts. Share Off default.</p></div>';
+  syncPromptsChrome();
+  const on=PROMPTS_ENABLED;
+  $('#content').innerHTML=`<div class="card">
+    <div class="section-title" style="margin-top:0">Local prompts</div>
+    <div class="toggle-row">
+      <div>
+        <div style="font-weight:600">Show prompt / response text</div>
+        <div style="color:var(--dim);font-size:12px;margin-top:4px">Default Off. Local only — never uploaded. Share stays Off.</div>
+      </div>
+      <div class="toggle ${on?'on':'off'}" id="promptsToggle" title="${on?'On':'Off'}"></div>
+    </div>
+    <p style="color:var(--dim);font-size:12px;margin:12px 0 0">When Off: Activity detail stays aggregates only — no raw prompts. When On: detail may show on-device text from adapters that expose it (missing fields stay hidden).</p>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <div class="section-title" style="margin-top:0">GitHub shipping</div>
+    <p style="color:var(--muted)">Configured now: <strong style="color:var(--text)">${cfg?'yes':'no'}</strong>${ship.login?(' · '+esc(ship.login)+' via '+esc(ship.auth_source||'?')):''}</p>
+    <p style="color:var(--muted);font-size:13px">How to configure (secrets stay on this machine — never commit PATs):</p>
+    <ol style="color:var(--muted);font-size:13px;line-height:1.6"><li>Set env <code>ARGUS_GITHUB_TOKEN</code> to a personal PAT, or</li><li>Set <code>ARGUS_GITHUB_ENABLED=1</code> and use authenticated <code>gh</code>, or</li><li>Write <code>{"github":{"enabled":true}}</code> to <code>%LOCALAPPDATA%/argus-local/settings.json</code>.</li></ol>
+    <p style="color:var(--dim);font-size:12px">When unconfigured, Shipping shows dashes — no fake stub counts. Share Off default.</p>
+  </div>`;
+  const tog=$('#promptsToggle');
+  if(tog) tog.addEventListener('click', async ()=>{
+    const next=!PROMPTS_ENABLED;
+    if(next && !PROMPTS_GATE_SEEN){
+      const ok=confirm('Enable local prompt/response text in Activity detail?\\n\\nText stays on this device — never uploaded. Share stays Off.');
+      if(!ok) return;
+      PROMPTS_GATE_SEEN=true;
+      sessionStorage.setItem('argus_prompts_gate','1');
+    }
+    await setPromptsEnabled(next);
+    renderSettings();
+  });
 }
 
 function hideField(v){return v==null||v===''||v===undefined}
-function sessionDetailHtml(a){
+function sessionDetailHtml(a, detail){
   if(!a) return '<p style="color:var(--dim);margin:0">Select a session for aggregates (no prompts or code).</p>';
   const tok=(!a.tokens_known)?'—':(!a.cost_complete?`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">context (not billable in/out)</span>`:`${fmtTok(a.tokens)} <span style="color:var(--dim);font-weight:400">(in ${fmtTok(a.input_tokens)} / out ${fmtTok(a.output_tokens)})</span>`);
   const cost=a.cost_complete?(a.tokens_known?fmtUsd(a.est_spend_usd)+' <span style="color:var(--dim);font-weight:400">estimate</span>':'—'):'incomplete';
   const dur=a.duration?esc(a.duration):'—';
   const note=a.adapter_note?`<div class="detail-note">${esc(a.adapter_note)}</div>`:'';
   const partial=a.cost_complete?'':'<div class="warn-tag" style="display:inline-block;margin-top:8px">cost incomplete</div>';
+  let promptsBlock='';
+  if(PROMPTS_ENABLED){
+    const d=detail||{};
+    const p=d.prompt_text, r=d.response_text;
+    if(!p && !r){
+      promptsBlock=`<div class="prompt-box"><div class="warn-tag" style="display:inline-block;margin-bottom:6px">prompts missing</div><div style="color:var(--dim);font-size:12px">Prompts on (local) — no on-disk prompt/response text for this session.</div></div>`;
+    } else {
+      promptsBlock='<div class="prompt-box" id="promptBlocks">';
+      if(p) promptsBlock+=`<h4>Prompt</h4>${truncHtml(p,false)}`;
+      if(r) promptsBlock+=`<h4 style="margin-top:12px">Response</h4>${truncHtml(r,false)}`;
+      promptsBlock+='<div class="detail-note" style="margin-top:10px">Local only — never uploaded — Share Off</div></div>';
+    }
+  } else {
+    promptsBlock='<p class="detail-note">aggregates only — no raw prompts or code — local-first</p>';
+  }
   return `<div class="detail-grid">
     <div><div class="k">Session id</div><div class="v" style="font-weight:500;font-size:12px;word-break:break-all">${esc(a.id)}</div></div>
     <div><div class="k">Source</div><div class="v">${esc(a.source||a.tool)}</div></div>
@@ -295,7 +390,7 @@ function sessionDetailHtml(a){
     <div><div class="k">Tools accepted</div><div class="v">${a.tools_accepted!=null?a.tools_accepted:'—'}</div></div>
     <div><div class="k">Cost complete</div><div class="v">${a.cost_complete?'yes':'no'}</div></div>
     <div><div class="k">Est. spend</div><div class="v">${cost}</div></div>
-  </div>${partial}${note}<p class="detail-note">aggregates only — no raw prompts or code — local-first</p>`;
+  </div>${partial}${note}${promptsBlock}`;
 }
 let SELECTED_SESSION=(new URLSearchParams(location.search).get('sid')||null);
 function renderActivity(){
@@ -304,6 +399,7 @@ function renderActivity(){
   $('#lockLine').textContent=(d.language_lock&&d.language_lock.observations_note)||'Local only — observations, not a score';
   $('#status').innerHTML=statusHtml(d.adapter_status);
   syncFixtureBanner();
+  syncPromptsChrome();
   const list=(d.activity||[]);
   if(SELECTED_SESSION && !list.some(a=>a.id===SELECTED_SESSION)) SELECTED_SESSION=null;
   if(!SELECTED_SESSION && list.length) SELECTED_SESSION=list[0].id;
@@ -323,17 +419,45 @@ function renderActivity(){
         <table class="table" id="actTable"><thead><tr><th>Time</th><th>Tool</th><th>Model</th><th>Tokens</th><th>Dur</th><th></th></tr></thead>
         <tbody>${rows||'<tr><td colspan="6" style="color:var(--dim)">No sessions in period</td></tr>'}</tbody></table>
       </div>
-      <div class="card">
+      <div class="card" id="actDetailCard">
         <div class="section-title" style="margin-top:0">Session detail</div>
-        ${sessionDetailHtml(selected)}
+        ${sessionDetailHtml(selected, SESSION_DETAIL && SESSION_DETAIL.id===SELECTED_SESSION ? SESSION_DETAIL : null)}
       </div>
     </div>`;
   const table=$('#actTable');
   if(table) table.addEventListener('click',e=>{
     const tr=e.target.closest('tr[data-sid]'); if(!tr)return;
     SELECTED_SESSION=tr.getAttribute('data-sid');
+    SESSION_DETAIL=null;
     renderActivity();
   });
+  const detailCard=$('#actDetailCard');
+  if(detailCard) detailCard.addEventListener('click',e=>{
+    const b=e.target.closest('button.expand'); if(!b)return;
+    const pre=b.previousElementSibling;
+    if(!pre) return;
+    const expand=b.getAttribute('data-expand')==='1';
+    // re-fetch full text from SESSION_DETAIL
+    const which = pre.previousElementSibling && /response/i.test(pre.previousElementSibling.textContent||'') ? 'response' : 'prompt';
+    const full = which==='response' ? (SESSION_DETAIL&&SESSION_DETAIL.response_text) : (SESSION_DETAIL&&SESSION_DETAIL.prompt_text);
+    if(full==null) return;
+    const wrap=document.createElement('div');
+    wrap.innerHTML=truncHtml(full, expand);
+    pre.replaceWith(wrap.firstChild);
+    b.replaceWith(wrap.querySelector('button.expand')||document.createTextNode(''));
+  });
+  if(PROMPTS_ENABLED && SELECTED_SESSION){
+    fetch('/api/session/'+encodeURIComponent(SELECTED_SESSION)+'?days='+DAYS)
+      .then(r=>r.ok?r.json():null)
+      .then(j=>{
+        if(!j || j.id!==SELECTED_SESSION) return;
+        SESSION_DETAIL=j;
+        const card=$('#actDetailCard');
+        if(card){
+          card.innerHTML=`<div class="section-title" style="margin-top:0">Session detail</div>${sessionDetailHtml(selected, j)}`;
+        }
+      }).catch(()=>{});
+  }
 }
 
 function renderStub(name){
@@ -345,6 +469,7 @@ function renderStub(name){
 }
 function render(){
   if(!DATA)return;
+  syncPromptsChrome();
   if(PAGE==='today')renderToday();
   else if(PAGE==='activity')renderActivity();
   else if(PAGE==='insights')renderInsights();

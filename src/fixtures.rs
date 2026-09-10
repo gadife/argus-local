@@ -7,6 +7,25 @@ pub fn fixture_sessions() -> Vec<SessionRecord> {
     let now = Utc::now();
     let mut rows = Vec::new();
 
+    // Stable ARG-37 demo session (prompt/response available when opted in)
+    {
+        let start = now - Duration::hours(2);
+        rows.push(SessionRecord {
+            id: crate::adapters::FIXTURE_PROMPTS_ID.into(),
+            tool: "Claude Code".into(),
+            model: "Claude Sonnet 4".into(),
+            started_at: start,
+            ended_at: start + Duration::minutes(18),
+            input_tokens: 12_000,
+            output_tokens: 3_400,
+            tokens_known: true,
+            tools_proposed: 2,
+            tools_accepted: 2,
+            source: "fixture".into(),
+            cost_complete: true,
+        });
+    }
+
     // Claude Code - ~23 sessions, ~5.6M tokens
     for i in 0..23 {
         let start = now - Duration::hours(4 + i * 5);
