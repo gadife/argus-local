@@ -1,6 +1,7 @@
 //! Terminal UI — full screens via ratatui (same engine as HTML).
 use crate::insights::build_insights;
-use crate::models::{InsightsPayload, LanguageLock, PeriodRollup, SessionRecord};
+use crate::adapters::load_session_telemetry;
+use crate::models::{InsightsPayload, LanguageLock, PeriodRollup, SessionRecord, SessionTelemetry};
 use crate::rollups::{ShippingContext, format_tokens, rollup};
 use crate::SessionStore;
 use anyhow::Result;
@@ -418,18 +419,24 @@ pub fn write_proof_screens(store: SessionStore, days: u32, dir: &Path) -> Result
     std::fs::create_dir_all(dir)?;
     let mut app = App::new(store, days);
     let width = 100u16;
-    let height = 40u16;
+    let height = 60u16;
     let mut out_paths = Vec::new();
 
     for (page, name) in [(Page::Today, "tui-today"), (Page::Activity, "tui-activity"), (Page::Insights, "tui-insights"), (Page::Shipping, "tui-shipping"), (Page::Settings, "tui-settings")] {
         app.page = page;
         if page == Page::Activity {
-            // Prefer ARG-37 demo session when prompts on; else incomplete/Grok-style row.
+            // Prefer ARG-37 fixture, else live Grok telemetry session, else incomplete row.
             let idx = app
                 .today
                 .activity
                 .iter()
                 .position(|a| a.id == crate::adapters::FIXTURE_PROMPTS_ID)
+                .or_else(|| {
+                    app.today
+                        .activity
+                        .iter()
+                        .position(|a| a.id.contains("01a0881e-e77a-78e3-a262-6cdb294be825"))
+                })
                 .or_else(|| {
                     app.today
                         .activity
@@ -1030,41 +1037,121 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
             lines.push(Line::from(""));
             let push_kv = |lines: &mut Vec<Line>, k: &str, v: String| {
                 lines.push(Line::from(vec![
-                    Span::styled(format!("{:<14}", k), dim()),
+                    Span::styled(format!("{:<16}", k), dim()),
                     Span::styled(v, Style::default().fg(Color::White)),
                 ]));
             };
+            let push_sec = |lines: &mut Vec<Line>, name: &str| {
+                lines.push(Line::from(""));
+                lines.push(Line::from(Span::styled(name.to_string(), title_style())));
+            };
+
+            let tel = load_session_telemetry(&a.id).unwrap_or_else(|_| SessionTelemetry {
+                id: a.id.clone(),
+                tool: a.tool.clone(),
+                ..Default::default()
+            });
+
             push_kv(&mut lines, "id", a.id.clone());
-            push_kv(&mut lines, "started", a.started_at.clone());
-            push_kv(
-                &mut lines,
-                "duration",
-                if a.duration.is_empty() {
-                    "\u{2014}".into()
-                } else {
-                    a.duration.clone()
-                },
-            );
+            if let Some(ref t) = tel.generated_title {
+                push_kv(&mut lines, "title", t.clone());
+            }
+            if let Some(ref k) = tel.session_kind {
+                push_kv(&mut lines, "kind", k.clone());
+            }
+            if let Some(ref cwd) = tel.cwd {
+                push_kv(&mut lines, "cwd", cwd.clone());
+            }
             push_kv(&mut lines, "tool", a.tool.clone());
-            push_kv(
-                &mut lines,
-                "model",
-                if a.model.is_empty() {
-                    "\u{2014}".into()
-                } else {
-                    a.model.clone()
-                },
-            );
-            let (tok_key, tok_val) = if !a.tokens_known {
-                ("tokens", "\u{2014}".to_string())
+            let model = tel
+                .model
+                .clone()
+                .filter(|m| !m.is_empty())
+                .unwrap_or_else(|| {
+                    if a.model.is_empty() {
+                        "\u{2014}".into()
+                    } else {
+                        a.model.clone()
+                    }
+                });
+            push_kv(&mut lines, "model", model);
+
+            // Context
+            if tel.context_tokens_used.is_some() || tel.context_window_tokens.is_some() {
+                push_sec(&mut lines, "Context");
+                match (tel.context_tokens_used, tel.context_window_tokens, tel.context_pct) {
+                    (Some(u), Some(w), Some(p)) => {
+                        push_kv(
+                            &mut lines,
+                            "used/window",
+                            format!("{} / {} ({:.1}%)", format_tokens(u), format_tokens(w), p),
+                        );
+                    }
+                    (Some(u), Some(w), None) => {
+                        push_kv(
+                            &mut lines,
+                            "used/window",
+                            format!("{} / {}", format_tokens(u), format_tokens(w)),
+                        );
+                    }
+                    (Some(u), None, _) => {
+                        push_kv(&mut lines, "context used", format_tokens(u));
+                    }
+                    _ => {}
+                }
+                if let Some(ref n) = tel.context_note {
+                    lines.push(Line::from(Span::styled(n.clone(), dim())));
+                }
+            } else if !a.tokens_known {
+                push_kv(&mut lines, "tokens", "\u{2014}".into());
             } else if !a.cost_complete {
-                // Grok-style / incomplete: context tokens — not billable in/out
-                (
+                push_kv(
+                    &mut lines,
                     "tokens/context",
                     format!("{} context (not billable in/out)", tok_label(a.tokens, true)),
-                )
-            } else {
-                (
+                );
+            }
+
+            // Billable I/O
+            let has_io = tel.input_tokens.is_some()
+                || tel.output_tokens.is_some()
+                || tel.total_tokens.is_some()
+                || tel.reasoning_tokens.is_some();
+            if has_io {
+                push_sec(&mut lines, "Billable I/O");
+                if let Some(v) = tel.input_tokens {
+                    push_kv(&mut lines, "input", format_tokens(v));
+                }
+                if let Some(v) = tel.output_tokens {
+                    push_kv(&mut lines, "output", format_tokens(v));
+                }
+                if let Some(v) = tel.total_tokens {
+                    push_kv(&mut lines, "total", format_tokens(v));
+                }
+                if let Some(v) = tel.reasoning_tokens {
+                    push_kv(&mut lines, "reasoning", format_tokens(v));
+                }
+                if let Some(v) = tel.model_calls {
+                    push_kv(&mut lines, "model calls", v.to_string());
+                }
+                if let Some(v) = tel.api_duration_ms {
+                    push_kv(&mut lines, "api ms", v.to_string());
+                }
+                if let Some(c) = tel.cost_usd_estimate {
+                    push_kv(
+                        &mut lines,
+                        "est. spend",
+                        format!(
+                            "${:.4} {}",
+                            c,
+                            tel.cost_note.as_deref().unwrap_or("estimate \u{2260} invoice")
+                        ),
+                    );
+                }
+            } else if a.cost_complete && a.tokens_known {
+                push_sec(&mut lines, "Billable I/O");
+                push_kv(
+                    &mut lines,
                     "tokens",
                     format!(
                         "{} (in {} / out {})",
@@ -1072,26 +1159,52 @@ fn draw_activity(f: &mut Frame, area: Rect, app: &App) {
                         tok_label(a.input_tokens, true),
                         tok_label(a.output_tokens, true)
                     ),
-                )
-            };
-            push_kv(&mut lines, tok_key, tok_val);
-            push_kv(&mut lines, "tools prop.", a.tools_proposed.to_string());
-            push_kv(&mut lines, "tools accept", a.tools_accepted.to_string());
-            push_kv(
-                &mut lines,
-                "cost",
-                if a.cost_complete { "complete".into() } else { "incomplete".into() },
-            );
-            push_kv(
-                &mut lines,
-                "est. spend",
-                if a.cost_complete && a.tokens_known {
-                    usd_label(a.est_spend_usd, true)
-                } else {
-                    "\u{2014}".into()
-                },
-            );
-            push_kv(&mut lines, "source", a.source.clone());
+                );
+            }
+
+            // Cache
+            if tel.cached_read_tokens.is_some() || tel.cache_creation_tokens.is_some() {
+                push_sec(&mut lines, "Cache");
+                if let Some(v) = tel.cached_read_tokens {
+                    push_kv(&mut lines, "cached read", format_tokens(v));
+                }
+                if let Some(v) = tel.cache_creation_tokens {
+                    push_kv(&mut lines, "cache create", format_tokens(v));
+                }
+            }
+
+            // Signals
+            let has_sig = tel.turn_count.is_some()
+                || tel.tool_call_count.is_some()
+                || tel.avg_time_to_first_token_ms.is_some()
+                || tel.session_duration_seconds.is_some();
+            if has_sig {
+                push_sec(&mut lines, "Signals");
+                if let Some(v) = tel.turn_count {
+                    push_kv(&mut lines, "turns", v.to_string());
+                }
+                if let Some(v) = tel.tool_call_count {
+                    push_kv(&mut lines, "tool calls", v.to_string());
+                }
+                if let Some(ref tools) = tel.tools_used {
+                    if !tools.is_empty() {
+                        push_kv(&mut lines, "tools used", tools.join(", "));
+                    }
+                }
+                if let Some(v) = tel.avg_time_to_first_token_ms {
+                    push_kv(&mut lines, "avg TTFT", format!("{:.0} ms", v));
+                }
+                if let Some(v) = tel.avg_response_time_ms {
+                    push_kv(&mut lines, "avg resp", format!("{:.0} ms", v));
+                }
+                if let Some(v) = tel.session_duration_seconds {
+                    push_kv(&mut lines, "duration s", v.to_string());
+                }
+            } else {
+                push_kv(&mut lines, "tools prop.", a.tools_proposed.to_string());
+                push_kv(&mut lines, "tools accept", a.tools_accepted.to_string());
+            }
+
             if !a.adapter_note.is_empty() {
                 lines.push(Line::from(""));
                 lines.push(Line::from(Span::styled(a.adapter_note.clone(), warn())));

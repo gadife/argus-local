@@ -88,6 +88,91 @@ pub struct ActivityRow {
     pub est_spend_usd: f64,
 }
 
+/// Per-session telemetry for Activity detail (ARG-38).
+/// All metric fields are Option — omit / hide when absent. Never invent numbers.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SessionTelemetry {
+    pub id: String,
+    pub tool: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model: Option<String>,
+
+    // --- Context (distinct from billable I/O) ---
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context_tokens_used: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context_window_tokens: Option<i64>,
+    /// Percent of window used when both context fields present.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context_pct: Option<f64>,
+
+    // --- Billable I/O (SUM of turn_completed.usage when present) ---
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub input_tokens: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub output_tokens: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_tokens: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cached_read_tokens: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cache_creation_tokens: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reasoning_tokens: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub model_calls: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_duration_ms: Option<i64>,
+    /// Estimate from costUsdTicks when present — NOT an invoice.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_usd_estimate: Option<f64>,
+
+    // --- Signals extras ---
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub turn_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tool_call_count: Option<i64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub tools_used: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avg_time_to_first_token_ms: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub avg_response_time_ms: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_duration_seconds: Option<i64>,
+
+    // --- Summary ---
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub generated_title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub session_kind: Option<String>,
+    /// Path only (cwd) — never secrets.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cwd: Option<String>,
+
+    /// Honesty labels for UI.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub context_note: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_note: Option<String>,
+}
+
+/// GET /api/session/:id payload — activity + telemetry + opt-in prompts (ARG-37/38).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SessionDetail {
+    pub activity: ActivityRow,
+    pub telemetry: SessionTelemetry,
+    pub language_lock: LanguageLock,
+    pub prompts_enabled: bool,
+    /// Present only when prompts_enabled and adapter file had the field.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub prompt_text: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub response_text: Option<String>,
+    /// True when opt-in is on but this adapter/session has no recoverable text.
+    pub prompts_missing: bool,
+}
+
 /// Shipping panel payload. When `is_stub` / not configured: hide numbers (no fake counts).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ShippingStub {
@@ -113,35 +198,6 @@ pub struct ShippingEvent {
     pub title: String,
 }
 
-
-/// Per-session detail payload (Activity drill-in). Prompt/response only when opted in.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SessionDetail {
-    pub id: String,
-    pub tool: String,
-    pub model: String,
-    pub started_at: String,
-    pub ended_at: String,
-    pub duration: String,
-    pub input_tokens: i64,
-    pub output_tokens: i64,
-    pub tokens: i64,
-    pub tokens_known: bool,
-    pub tools_proposed: i64,
-    pub tools_accepted: i64,
-    pub cost_complete: bool,
-    pub source: String,
-    pub adapter_note: String,
-    pub est_spend_usd: f64,
-    pub prompts_enabled: bool,
-    /// Present only when prompts_enabled and adapter file had the field.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub prompt_text: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub response_text: Option<String>,
-    /// True when opt-in is on but this adapter/session has no recoverable text.
-    pub prompts_missing: bool,
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LanguageLock {

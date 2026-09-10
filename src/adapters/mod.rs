@@ -1,15 +1,17 @@
-﻿//! Adapter discovery and ingestion.
+//! Adapter discovery and ingestion.
 pub(crate) mod claude;
 mod prompts;
 pub(crate) mod cursor;
 mod github;
 mod grok;
+mod telemetry;
 
 pub use claude::scan_claude;
 pub use cursor::scan_cursor;
 pub use github::{is_opted_in, scan_github, settings_path_display, snapshot_for_period};
 pub use grok::scan_grok;
 pub use prompts::{load_session_texts, SessionTexts, FIXTURE_PROMPTS_ID};
+pub use telemetry::load_session_telemetry;
 
 use crate::models::{AdapterStatus, SessionRecord, ShippingEvent};
 use anyhow::Result;
@@ -93,4 +95,3 @@ pub fn scan_all() -> Result<ScanResult> {
         github_login,
     })
 }
-
